@@ -1,0 +1,7 @@
+gradio
+transformers>=4.45.0
+torch
+torchvision
+Pillow
+accelerate
+qwen-vl-utils

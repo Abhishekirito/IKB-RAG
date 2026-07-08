@@ -1,0 +1,656 @@
+AI FOR INDUSTRIAL KNOWLEDGE INTELLIGENCE
+Unified Asset & Operations Brain
+Complete Hackathon Solution Blueprint
+Theme: Industrial Intelligence / Document Management / Knowledge Engineering / Quality
+Problem Statement #8 | Full-Stack AI Solution | Open-Source First Approach
+Table of Contents
+1. Executive Summary
+The industrial sector faces a critical knowledge fragmentation crisis. Engineers and operators in asset-intensive industries spend an average of 35% of their working time searching for information across disconnected document systems — a staggering productivity and safety liability. Our solution, the Industrial Knowledge Brain (IKB), is a full-stack, AI-powered platform that ingests, unifies, and makes queryable the entire institutional knowledge of an industrial organization.
+IKB transforms passive document repositories into an active, conversational, agentic intelligence layer. It connects maintenance records, P&IDs, safety procedures, OEM manuals, and inspection reports into a unified knowledge graph — enabling any employee, from the field technician to the plant manager, to get instant, accurate, cited answers on any device.
+Key Metric
+Industry Status Quo
+With IKB
+Time spent searching for info
+35% of working hours
+<5% of working hours
+Document systems per plant
+7–12 disconnected silos
+1 unified knowledge layer
+Unplanned downtime contribution
+18–22% from knowledge gaps
+Targeted 60%+ reduction
+Knowledge cliff risk
+25% engineers retiring
+Captured & institutionalized
+Compliance check speed
+Days/weeks manual effort
+Real-time automated mapping
+2. Problem Deep Dive & Root Cause Analysis
+2.1 The Knowledge Fragmentation Crisis
+According to the McKinsey 2024 Global Survey cited in the problem statement, professionals in asset-intensive industries waste over a third of their working hours not doing actual work — but merely trying to find the information they need to do their work. This is not a minor inefficiency; it is a structural failure of how industrial knowledge is organized.
+A NASSCOM-EY study of Indian manufacturing and energy companies found the average large plant operates across 7 to 12 disconnected document systems:
+P&IDs and engineering drawings (often in legacy CAD or scanned paper formats)
+Maintenance work orders (typically in ERP systems like SAP or Maximo)
+Operating procedures (PDFs in SharePoint or file servers)
+Inspection records (spreadsheets, sometimes paper)
+Regulatory submissions (scattered across email archives and FTP servers)
+OEM manuals (PDFs, often poorly indexed)
+Quality Management System (QMS) records
+2.2 The Three Compounding Problems
+Problem A: The Information Access Gap
+When a maintenance technician needs to replace a pump seal at 2 AM, they need: the OEM spec, the last three inspection records, the relevant P&ID, the safety procedure, and any open work orders related to that equipment tag. Today, this information lives in five different systems, requiring five different logins, five different search interfaces, and often a phone call to a colleague who 'knows where things are.'
+Problem B: The Decision Quality Gap
+Without complete equipment history and failure pattern context, maintenance teams make reactive decisions. Root Cause Analysis becomes guesswork because no single person or system can hold all relevant historical context. BIS Research estimates this contributes to 18-22% of all unplanned downtime events in Indian heavy industry.
+Problem C: The Knowledge Cliff
+An estimated 25% of India's experienced industrial engineers and operators will retire in the next decade, taking with them decades of undocumented tribal knowledge — informal workarounds, failure patterns, equipment quirks, vendor relationships. Once gone, this knowledge cannot be recovered through any document digitization effort.
+2.3 Why Existing Solutions Fail
+Existing Approach
+Why It Fails
+What IKB Does Instead
+Enterprise Search (SharePoint, Elasticsearch)
+Returns documents, not answers. Cannot reason across multiple documents or understand industrial context.
+Returns cited answers synthesized from multiple sources with confidence scores.
+ERP Systems (SAP, Maximo)
+Structured data only. Cannot ingest unstructured PDFs, drawings, emails. No natural language interface.
+Ingests all formats. NLP interface. Bridges structured and unstructured data.
+Manual Knowledge Bases / Wikis
+Require human curation. Go stale immediately. No auto-update. Search is keyword-only.
+Auto-updates from source documents. Semantic search. No manual curation required.
+Generic ChatGPT/Copilot
+No access to private documents. Hallucinates industrial facts. No traceability. Not domain-adapted.
+Grounded in your actual documents. Full citation trail. Domain-specific ontology.
+3. Proposed Solution: Industrial Knowledge Brain (IKB)
+3.1 Solution Architecture Overview
+IKB is built on three architectural pillars:
+Pillar 1 — Universal Ingestion Engine: Processes any document type and extracts structured knowledge
+Pillar 2 — Industrial Knowledge Graph: Maintains entity relationships, ontologies, and context across all documents
+Pillar 3 — Agentic Query & Action Layer: Answers questions, detects compliance gaps, and pushes proactive alerts
+3.2 The Five Core AI Agents
+Agent 1: Universal Document Ingestion & Knowledge Graph Agent
+This pipeline agent processes PDFs, P&IDs (engineering drawings), scanned forms, spreadsheets, and email archives. It extracts entities — equipment tags, process parameters, regulatory references, personnel, dates, vendor names — and builds a unified knowledge graph that maintains relationships across document types. The graph updates automatically as new records arrive, using change detection to avoid full reprocessing.
+Key Technologies: Apache Tika (document extraction), Tesseract OCR (scanned documents), OpenCV + YOLO (P&ID parsing), spaCy + custom industrial NER model, Neo4j (knowledge graph), Apache Kafka (streaming updates)
+Agent 2: Expert Knowledge Copilot
+A RAG-powered conversational AI that answers operational, maintenance, and engineering queries across the full document corpus. Every answer includes source citations, confidence scores, and direct links to the originating document pages. Built mobile-first using a Progressive Web App (PWA) architecture for field technicians.
+Key Technologies: LlamaIndex or LangChain (RAG orchestration), Qdrant (vector database), Ollama with Mistral-7B or Llama-3.1-8B (LLM), FastAPI (API backend), React + Vite (frontend PWA)
+Agent 3: Maintenance Intelligence & RCA Agent
+This agent fuses work order history, equipment failure records, OEM manuals, inspection findings, and real-time operating conditions to generate predictive maintenance recommendations and Root Cause Analysis support. It identifies failure pattern correlations that no individual team member could detect by reviewing records one at a time.
+Key Technologies: TimescaleDB (time-series sensor data), scikit-learn + Prophet (predictive modeling), NetworkX (failure dependency graphs), Apache Airflow (scheduled analysis pipelines)
+Agent 4: Quality & Regulatory Compliance Intelligence Agent
+An agentic system that maps regulatory requirements from Factory Act, OISD standards, PESO regulations, environmental norms, and quality standards against current procedures, equipment states, and inspection records. It identifies compliance gaps, auto-generates evidence packages for audits, and flags quality deviations before they escalate.
+Key Technologies: Custom regulatory ontology (OWL/RDF), SPARQL queries for compliance checking, Haystack (document QA), automated report generation with WeasyPrint
+Agent 5: Lessons Learned & Failure Intelligence Engine
+An AI agent that analyses incident reports, near-miss records, audit findings, and quality non-conformances across the organization's history and external industry databases. It identifies systemic failure patterns invisible to any individual review and proactively pushes relevant warnings to operational teams before similar conditions recur — essentially giving every engineer access to the collective memory of every engineer who came before them.
+Key Technologies: Sentence transformers (semantic similarity for incident pattern matching), Redis Pub/Sub (real-time alert push), Celery (background task queue)
+4. Technical Architecture & System Design
+4.1 High-Level Architecture
+IKB follows a microservices architecture with event-driven communication between services. Each AI agent runs as an independent service, enabling independent scaling, deployment, and failure isolation.
+Layer
+Components
+Technology Stack
+Data Ingestion
+Document processors, OCR engine, P&ID parser, email crawler
+Apache Tika, Tesseract, OpenCV, Apache Kafka
+Knowledge Store
+Vector DB, Graph DB, Relational DB, Time-series DB
+Qdrant, Neo4j, PostgreSQL, TimescaleDB
+AI/ML Layer
+LLM inference, Embedding models, Predictive models, NER
+Ollama (Mistral/Llama), sentence-transformers, scikit-learn
+Agent Orchestration
+RAG pipeline, Agentic workflows, Task scheduler
+LlamaIndex, LangGraph, Apache Airflow
+API Layer
+REST API, WebSocket, GraphQL
+FastAPI, Strawberry GraphQL, Redis
+Frontend
+Web app, Mobile PWA, Admin dashboard
+React + Vite, Tailwind CSS, shadcn/ui
+Infrastructure
+Container orchestration, CI/CD, Monitoring
+Docker, Docker Compose, GitHub Actions, Grafana
+4.2 Data Flow Architecture
+The data flows through four stages:
+INGEST: Raw documents arrive via file upload, email sync, or API push. Apache Kafka queues them for processing.
+EXTRACT: Document processors extract text, tables, images, and entities. OCR handles scanned documents. Computer vision parses P&ID symbols.
+INDEX: Extracted content is embedded (using sentence-transformers) and stored in Qdrant. Entities and relationships are stored in Neo4j. Metadata goes to PostgreSQL.
+SERVE: Query arrives from user. LlamaIndex retrieves relevant chunks from Qdrant, augments with graph context from Neo4j, and passes to the LLM for answer generation with citations.
+4.3 P&ID Parsing — The Differentiator
+P&ID (Piping & Instrumentation Diagram) parsing is one of the hardest and most valuable capabilities in this solution. Our approach uses a multi-stage computer vision pipeline:
+Stage 1: Document pre-processing — deskew, denoise, and binarize scanned P&IDs using OpenCV
+Stage 2: Symbol detection — fine-tuned YOLO v8 model trained on industrial symbol datasets (ISO 10628, ISA 5.1)
+Stage 3: Text extraction — Tesseract OCR on equipment tags, instrument codes, and line numbers
+Stage 4: Topology extraction — graph algorithms to trace pipe connections between equipment
+Stage 5: Knowledge graph integration — each detected element becomes a node in the Neo4j graph with edges representing physical connections
+5. Modern Full-Stack Technology Choices
+5.1 Frontend Stack
+Technology
+Purpose
+Type
+Why Chosen
+React 18 + Vite
+Main UI framework
+Open-Source
+Fast HMR, component ecosystem, PWA support
+Tailwind CSS
+Utility-first styling
+Open-Source
+Rapid UI development, consistent design system
+shadcn/ui
+Component library
+Open-Source
+Accessible, customizable, built on Radix UI
+Tanstack Query
+Server state management
+Open-Source
+Caching, background refetch, optimistic updates
+React Router v6
+Client-side routing
+Open-Source
+File-based routing, data loading
+Zustand
+Global state
+Open-Source
+Lightweight, no boilerplate vs Redux
+Recharts / Tremor
+Data visualization
+Open-Source
+Industrial dashboards, time-series charts
+PDF.js
+In-browser PDF viewer
+Open-Source
+Show source documents with highlighted citations
+5.2 Backend Stack
+Technology
+Purpose
+Type
+Why Chosen
+FastAPI (Python)
+REST API framework
+Open-Source
+Async, auto OpenAPI docs, Python AI ecosystem
+Celery + Redis
+Task queue
+Open-Source
+Background document processing, scheduled jobs
+PostgreSQL 16
+Primary relational DB
+Open-Source
+JSONB support, pgvector extension, robust
+Neo4j Community
+Knowledge graph DB
+Open-Source
+Native graph queries, Cypher language
+Qdrant
+Vector database
+Open-Source
+Fast ANN search, filtering, Rust-based performance
+TimescaleDB
+Time-series data
+Open-Source
+PostgreSQL extension for sensor data
+Apache Kafka
+Event streaming
+Open-Source
+Reliable document ingestion pipeline
+MinIO
+Object storage
+Open-Source
+S3-compatible storage for raw documents
+5.3 AI / ML Stack
+Technology
+Purpose
+Type
+Why Chosen
+LlamaIndex
+RAG orchestration
+Open-Source
+Industrial document RAG, knowledge graph integration
+LangGraph
+Agentic workflows
+Open-Source
+Multi-step reasoning agents with state management
+Ollama
+Local LLM serving
+Open-Source / Free
+Run Llama-3, Mistral, Qwen locally on server
+sentence-transformers
+Embedding models
+Open-Source
+all-MiniLM-L6, BGE embeddings for semantic search
+spaCy + custom NER
+Entity extraction
+Open-Source
+Industrial entity recognition (equipment tags, etc.)
+Apache Tika
+Document parsing
+Open-Source
+400+ file formats, Java-based, mature
+Tesseract OCR 5
+Text from images/scans
+Open-Source
+Hindi + English support, LSTM-based accuracy
+YOLOv8 (Ultralytics)
+P&ID symbol detection
+Open-Source
+State-of-art object detection, fine-tunable
+Haystack
+Document QA pipeline
+Open-Source
+Compliance question-answering over legal docs
+Apache Airflow
+Pipeline orchestration
+Open-Source
+Scheduled ML jobs, data pipeline DAGs
+6. Free & Open-Source LLMs You Can Deploy
+One of the most critical decisions for this hackathon project is choosing the right LLM that can be self-hosted without ongoing API costs. Here are the best options:
+6.1 Top Self-Hostable LLMs (via Ollama)
+Model
+Size
+Hardware Needed
+Best For
+Llama 3.1 8B (Meta)
+4.7 GB RAM
+8GB VRAM GPU or 16GB RAM CPU
+General Q&A, instruction following, best quality/size ratio
+Mistral 7B v0.3
+4.1 GB RAM
+8GB VRAM GPU or 16GB RAM CPU
+Fast inference, European data compliance, strong reasoning
+Qwen2.5 7B (Alibaba)
+4.4 GB RAM
+8GB VRAM GPU or 16GB RAM CPU
+Multilingual (Hindi support), strong technical reasoning
+Phi-3.5 Mini (Microsoft)
+2.2 GB RAM
+4GB VRAM GPU or 8GB RAM CPU
+Extremely efficient, runs on modest hardware
+Llama 3.1 70B (Meta)
+40 GB RAM
+2x A100 or 4x A40 GPUs
+Near-GPT-4 quality for complex industrial reasoning
+Gemma 2 9B (Google)
+5.4 GB RAM
+10GB VRAM GPU or 20GB RAM CPU
+Strong document understanding, Google quality
+DeepSeek-R1 8B
+4.9 GB RAM
+10GB VRAM or 16GB RAM CPU
+Superior multi-step reasoning for RCA tasks
+6.2 How to Deploy with Ollama
+Ollama is the easiest way to run LLMs locally. Install on any Linux server:
+curl -fsSL https://ollama.ai/install.sh | sh && ollama pull llama3.1:8b
+Then expose it as an API endpoint compatible with the OpenAI API format — this means any code written for OpenAI's API works directly with your self-hosted LLM with just a base URL change.
+6.3 Embedding Models (Free, Self-Hostable)
+BAAI/bge-large-en-v1.5 — Best English embeddings, 1024 dimensions, via sentence-transformers
+all-MiniLM-L6-v2 — Lightweight, fast, good quality for semantic search
+nomic-embed-text — 8192 token context window, excellent for long documents
+multilingual-e5-large — Supports Hindi + English, critical for Indian industrial documents
+7. Low-Cost & Free Claude / AI API Providers
+For production-quality AI without self-hosting, these providers offer generous free tiers or very low-cost access:
+7.1 Free Tier API Providers
+Provider
+Free Tier
+Models Available
+Best For
+Google AI Studio
+Gemini 1.5 Flash — 1M tokens/day free
+Gemini 1.5 Flash, Gemini 1.5 Pro (limited)
+Long context (1M tokens), document analysis
+Groq Cloud
+Free tier — 14,400 req/day
+Llama-3.1-8B, Mistral 7B, Gemma 9B
+Extremely fast inference (700+ tokens/sec)
+Together AI
+$25 free credit on signup
+100+ open-source models
+Fine-tuning support, wide model selection
+Hugging Face Inference
+Free serverless endpoints
+Thousands of open models
+Specialized models (NER, classification)
+Cloudflare Workers AI
+Free tier included
+Llama 3.1, Mistral, Qwen
+Edge inference, global low latency
+OpenRouter
+Free models available
+Claude 3 Haiku, Gemma, Llama
+Route across multiple providers, fallbacks
+7.2 Low-Budget Claude API Access
+Provider/Model
+Cost
+Claude Access
+Notes
+Anthropic Direct (Claude Haiku 3)
+$0.25/MTok input
+Claude 3 Haiku
+Cheapest official Claude; very capable for RAG tasks
+AWS Bedrock (Claude)
+Pay per use; free tier 1st month
+Claude 3 Haiku, Sonnet
+Easy for India-based teams; INR billing possible
+OpenRouter (Claude via routing)
+~$0.10/MTok for Haiku routes
+Claude 3 Haiku via routing
+Cheapest Claude access; automatic fallback providers
+Vertex AI (Google)
+$300 free credit new accounts
+Gemini as Claude alternative
+Strong alternative with similar reasoning capabilities
+Recommended Strategy for Hackathon: Use Groq Cloud for fast LLM inference (free, Llama-3.1-8B at 700 tokens/sec), Google AI Studio Gemini 1.5 Flash for document analysis (1M context window, free), and Ollama with Mistral-7B running locally as a fallback. For final demo, switch to Claude 3 Haiku via Anthropic API for best quality — the cost for a demo will be under $5.
+8. Development Roadmap (Hackathon Timeline)
+8.1 Phase 1: Foundation (Days 1–2)
+Goal: Working document ingestion and basic RAG Q&A
+Set up Docker Compose with PostgreSQL, Qdrant, Redis, MinIO
+Implement basic document upload API with FastAPI
+Integrate Apache Tika for multi-format document text extraction
+Set up Tesseract OCR pipeline for scanned PDF handling
+Deploy sentence-transformers embedding model (nomic-embed-text)
+Implement vector storage in Qdrant with metadata filtering
+Build basic RAG pipeline with LlamaIndex + Ollama (Mistral-7B)
+Create React frontend with document upload and basic chat interface
+8.2 Phase 2: Intelligence Layer (Days 3–4)
+Goal: Knowledge graph + entity extraction + multiple agents
+Deploy Neo4j and implement industrial entity schema (Equipment, Location, Procedure, Regulation)
+Train or fine-tune spaCy NER model on industrial entity types (equipment tags: P-101A, TIC-203, etc.)
+Implement knowledge graph builder that links entities across documents
+Add P&ID parsing prototype with OpenCV contour detection and basic symbol recognition
+Build Compliance Agent: map regulatory requirements against procedure documents
+Implement Maintenance RCA Agent: query work order history + failure correlation
+Add source citation display in frontend with PDF.js document viewer
+Build confidence scoring for answers based on source document quality and recency
+8.3 Phase 3: Agentic Features & Polish (Days 5–6)
+Goal: Proactive intelligence + mobile PWA + demo preparation
+Implement Lessons Learned Engine with semantic similarity matching across incident reports
+Add proactive alert system using Redis Pub/Sub for compliance gap notifications
+Build mobile-responsive PWA with offline capability for field technicians
+Create visual knowledge graph explorer for equipment relationship visualization
+Implement role-based access control (field technician vs. engineer vs. manager views)
+Add multi-language support (Hindi + English) using multilingual embedding model
+Build demo dashboard with KPI widgets (documents indexed, queries answered, alerts generated)
+Record demo video with real industrial document samples
+8.4 Hackathon Deliverables Checklist
+Deliverable
+Status Target
+Notes
+Working Prototype (full RAG pipeline)
+MVP by Day 2
+Core hackathon requirement
+Architecture Diagram
+Ready by Day 1
+Draw with Excalidraw or Lucidchart
+Presentation Deck (10–12 slides)
+Ready by Day 5
+Focus on problem + demo screenshots
+Demo Video (3–5 minutes)
+Ready by Day 6
+Screen record with voiceover
+Source Code on GitHub
+Continuous
+Public repo with README + setup guide
+9. Winning Strategy: Addressing the Judging Criteria
+The hackathon judges on five criteria. Here is how IKB maximizes each one:
+9.1 Innovation (25%)
+IKB's innovation is not in using RAG (which is known) but in its industrial-specific intelligence layer:
+First solution to combine P&ID computer vision parsing with knowledge graph construction — enabling spatial relationships between equipment to be queryable
+Proactive push intelligence: instead of wait-for-query, IKB monitors for triggering conditions (a new incident report that matches a historical failure pattern) and pushes alerts unprompted
+Knowledge cliff mitigation: structured capture of informal knowledge from informal communications (email, WhatsApp archives) using NLP — preserving tribal knowledge before retirement
+Multi-modal industrial understanding: one system handles technical drawings, legal regulatory text, sensor time-series, and natural language simultaneously
+9.2 Business Impact (25%)
+IKB directly attacks the measurable pain points cited in the problem statement:
+35% time lost searching → Target: reduce to under 5% with sub-second cited answers
+18-22% unplanned downtime from knowledge gaps → Target: 60%+ reduction via proactive RCA alerts
+Knowledge cliff from retiring engineers → Target: 100% capture rate of institutional knowledge into queryable form
+Audit preparation (weeks of manual effort) → Target: real-time compliance gap reports and auto-generated evidence packages
+Estimated ROI for a 1,000-person plant: 35% productivity recovery × avg. engineer salary = multi-crore rupees annually
+9.3 Technical Excellence (20%)
+Retrieval quality: hybrid search combining vector similarity + BM25 keyword + graph traversal for precision
+Hallucination prevention: every answer grounded in actual document chunks with page-level citation
+Scalability design: async processing pipeline, horizontal scaling of all stateless services
+Evaluation metrics: built-in RAGAS evaluation framework to measure answer faithfulness and context precision
+Fault tolerance: dead letter queues, retry logic, circuit breakers on all external dependencies
+9.4 Scalability (15%)
+Microservices architecture enables each component to scale independently based on load
+Qdrant scales to billions of vectors with distributed deployment
+Apache Kafka handles millions of document ingestion events without loss
+Stateless API layer enables horizontal scaling behind a load balancer
+Document processing pipeline is idempotent — safe to retry and scale workers
+9.5 User Experience (15%)
+Mobile-first PWA design: field technicians can query from the shop floor on any smartphone
+Response time target under 3 seconds for any query over the full document corpus
+Source citations with PDF viewer: users can verify and trust every answer
+Confidence scores and source quality indicators: transparent about uncertainty
+Role-based interfaces: simple chat for technicians, advanced analytics for engineers, compliance dashboards for managers
+10. Complete Tool Reference: Open-Source vs Paid
+10.1 Open-Source Tools (Primary Stack — Use These)
+Tool
+Category
+License
+Alternative (Paid)
+LlamaIndex
+RAG Framework
+MIT
+LangChain (also free, but less RAG-focused)
+Qdrant
+Vector DB
+Apache 2.0
+Pinecone ($0.096/hr)
+Neo4j Community
+Graph DB
+GPLv3
+Neo4j AuraDB ($65/mo)
+Ollama
+LLM Runtime
+MIT
+OpenAI API ($)
+sentence-transformers
+Embeddings
+Apache 2.0
+OpenAI Embeddings ($0.02/MTok)
+spaCy
+NLP / NER
+MIT
+AWS Comprehend ($)
+Tesseract OCR
+OCR Engine
+Apache 2.0
+Google Cloud Vision ($1.50/1K pages)
+Apache Tika
+Document Parsing
+Apache 2.0
+Textract ($0.015/page)
+OpenCV
+Computer Vision
+Apache 2.0
+Azure Computer Vision ($)
+YOLOv8 (Ultralytics)
+Object Detection
+AGPL-3.0
+Amazon Rekognition ($)
+FastAPI
+Web Framework
+MIT
+AWS Lambda + API Gateway ($)
+PostgreSQL + pgvector
+Relational + Vector
+PostgreSQL License
+Supabase Pro ($25/mo)
+Apache Kafka
+Event Streaming
+Apache 2.0
+Confluent Cloud ($)
+MinIO
+Object Storage
+AGPL-3.0
+AWS S3 ($0.023/GB/mo)
+Grafana + Prometheus
+Monitoring
+AGPL-3.0
+Datadog ($)
+React + Vite
+Frontend
+MIT
+Next.js (also free, slightly heavier)
+Tailwind CSS + shadcn
+UI Components
+MIT
+Material UI, Ant Design
+LangGraph
+Agent Orchestration
+MIT
+AutoGen, CrewAI
+Haystack (deepset)
+Document QA
+Apache 2.0
+Azure AI Search ($)
+10.2 Paid Tools Worth Considering
+Tool
+Category
+Cost
+When to Use It
+Claude 3 Haiku (Anthropic)
+LLM API
+$0.25/MTok
+Best quality for complex industrial reasoning; use for final demo
+Gemini 1.5 Pro (Google)
+LLM API
+$3.50/MTok
+1M token context window; use for full-document analysis tasks
+Pinecone (Serverless)
+Vector DB
+Free up to 2GB
+If you want managed vector DB without infra overhead
+Unstructured.io
+Document Parsing
+Free tier
+Superior table extraction from PDFs vs Apache Tika
+AWS Textract
+OCR + Tables
+$0.015/page
+Best-in-class table extraction from scanned documents
+Roboflow
+CV Training
+Free tier
+Train YOLO models on custom P&ID datasets with annotation tools
+11. Key Implementation Snippets
+11.1 Document Ingestion Pipeline (Python/FastAPI)
+The ingestion pipeline accepts any file format and routes it through the appropriate processor:
+# FastAPI endpoint for document ingestion@app.post('/api/v1/documents/ingest')async def ingest_document(file: UploadFile, background_tasks: BackgroundTasks):    doc_id = str(uuid4())    background_tasks.add_task(process_document, doc_id, file)    return {'doc_id': doc_id, 'status': 'queued'}
+11.2 RAG Query Pipeline (LlamaIndex)
+# LlamaIndex RAG with Qdrant + Ollamafrom llama_index.core import VectorStoreIndex, Settingsfrom llama_index.vector_stores.qdrant import QdrantVectorStorefrom llama_index.llms.ollama import OllamaSettings.llm = Ollama(model='mistral:7b', base_url='http://localhost:11434')query_engine = index.as_query_engine(similarity_top_k=5, response_mode='compact')response = query_engine.query('What is the pressure rating of pump P-101A?')
+11.3 Knowledge Graph Entity Insertion (Neo4j)
+# Create equipment entity in Neo4j graphCREATE (e:Equipment {tag: 'P-101A', type: 'Centrifugal Pump',  location: 'Unit 3 - Cooling Tower', manufacturer: 'KSB',  last_inspection: date('2024-11-15'), status: 'operational'})MATCH (e:Equipment {tag:'P-101A'}), (m:Manual {title:'KSB Pump Manual'})CREATE (e)-[:HAS_MANUAL]->(m)
+12. Deployment Guide
+12.1 Local Development Setup
+All services run via Docker Compose for easy local development:
+Prerequisites: Docker Desktop, Node.js 20+, Python 3.11+, 16GB RAM minimum
+Clone repository and run: docker-compose up -d (starts all 8 backend services)
+Install Python dependencies: pip install -r requirements.txt
+Install Ollama separately (native, not Docker): curl -fsSL https://ollama.ai/install.sh | sh
+Pull LLM: ollama pull mistral:7b (4.1 GB download)
+Start FastAPI backend: uvicorn app.main:app --reload --port 8000
+Start React frontend: cd frontend && npm install && npm run dev
+12.2 Free Cloud Deployment Options
+Service
+What to Deploy
+Free Tier
+Notes
+Render.com
+FastAPI backend
+750 hrs/month free
+Easy Python deployment, good for hackathon demo
+Vercel
+React frontend
+Unlimited free
+Best for React PWA deployment, global CDN
+Qdrant Cloud
+Vector database
+1GB free forever
+Managed Qdrant, no infra needed
+Supabase
+PostgreSQL DB
+500MB free forever
+Managed Postgres with dashboard
+Neo4j AuraDB Free
+Knowledge graph
+1 free instance
+Managed Neo4j, perfect for demo
+Google Colab / Kaggle
+LLM inference
+Free GPU hours
+Run Ollama/vLLM on free T4 GPU
+Cloudflare Pages
+Static frontend
+Free
+Alternative to Vercel for React PWA
+13. Evaluation & Quality Metrics
+13.1 Technical Metrics to Demonstrate
+The judging criteria explicitly includes evaluation of entity extraction accuracy, query answer quality, knowledge graph linkage completeness, time-to-answer, and compliance gap detection accuracy. Here is how to measure and present each:
+Metric
+Target Value
+Measurement Method
+Tool
+Entity extraction F1-score
+>85% on test set
+Annotate 100 documents manually, compare
+spaCy Evaluator
+RAG Answer Faithfulness
+>90%
+RAGAS evaluation framework
+RAGAS library
+Query Response Time
+<3 seconds p95
+Load test with Locust
+Locust.io
+Knowledge Graph Completeness
+>95% entities linked
+Count unlinked entities
+Neo4j queries
+Compliance Gap Detection
+>80% recall on known gaps
+Manual audit of test regulations
+Custom eval script
+OCR Accuracy
+>95% character accuracy
+Compare with known ground truth
+Tesseract eval
+13.2 Using RAGAS for RAG Evaluation
+RAGAS (Retrieval Augmented Generation Assessment) is an open-source framework specifically designed to evaluate RAG pipelines. Install with pip install ragas and run evaluations across four dimensions: answer faithfulness (does the answer stick to retrieved context?), answer relevancy (is the answer relevant to the question?), context precision (are retrieved chunks useful?), and context recall (did retrieval find all relevant information?).
+14. Demo Preparation Strategy
+14.1 The Demo Script (5 Minutes)
+A compelling demo tells a story. Here is the recommended narrative arc:
+Open with the pain (30 sec): Show 7 browser tabs open — SAP, SharePoint, email, PDF reader, OEM website, WhatsApp, Excel — and say 'This is a maintenance engineer's screen at 2 AM when a pump fails.'
+Introduce IKB (30 sec): Single interface. Natural language. One search box.
+Live Demo 1 — Expert Copilot (90 sec): Type: 'What are the seal specifications for pump P-101A and when was it last replaced?' — Show the answer appearing with citations, confidence score, and a link opening the exact page in the OEM manual.
+Live Demo 2 — Compliance Agent (60 sec): Navigate to Compliance dashboard. Show a regulatory requirement from OISD mapped against a procedure document, with a gap flagged in red and the suggested corrective action.
+Live Demo 3 — Failure Intelligence (60 sec): Show incident report uploaded. System immediately matches it to 3 similar historical incidents from 2019, 2021, and 2023, and pushes an alert to maintenance team.
+Close with impact numbers (30 sec): Show the KPI dashboard — documents indexed, queries answered, alerts generated, estimated hours saved.
+14.2 Sample Documents to Use in Demo
+Use real industrial document samples to maximize credibility with judges. Recommended sources:
+P&ID examples: Search for 'sample P&ID drawing PDF filetype:pdf' on Google — numerous engineering educational sites provide them
+Safety procedures: OISD standards are publicly available on oisdindia.com
+Maintenance records: Create synthetic records using the industrial equipment tag format (P-101A, TIC-203, etc.)
+OEM manuals: Many pump and valve manufacturers (Grundfos, KSB, Flowserve) publish public manuals
+Inspection forms: Use standard NDT (Non-Destructive Testing) report templates available from TUV, ASNT
+15. Future Roadmap Beyond Hackathon
+15.1 Phase 2 Features (Post-Hackathon)
+SAP/Maximo ERP Integration via REST API connectors — live sync of work orders into the knowledge graph
+IoT Sensor Integration via MQTT broker — real-time equipment conditions feeding the predictive maintenance model
+Voice Interface for field technicians using Whisper ASR — query by speaking, receive audio response
+Augmented Reality (AR) overlay for equipment inspection — point phone at pump, see maintenance history in AR
+Federated Learning for multi-plant deployments — models improve from aggregate patterns without sharing sensitive data
+WhatsApp/Telegram bot interface — the most natural mobile interface for Indian factory workers
+15.2 Business Model
+Tier
+Target Customer
+Pricing Model
+Starter
+SME manufacturers (100-500 employees)
+INR 50,000/month SaaS + setup fee
+Professional
+Mid-size plants (500-2000 employees)
+INR 2,00,000/month + custom integrations
+Enterprise
+Large industrial groups, PSUs
+Custom pricing, on-premise deployment option
+— End of Document —
