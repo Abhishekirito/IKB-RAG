@@ -12,16 +12,22 @@ RUN uv pip install --system -U "mineru[all]"
 
 # Set Hugging Face specific environment variables
 ENV MINERU_BACKEND="pipeline"
-ENV HF_HOME="/data"
 ENV PYTHONUNBUFFERED=1
 
 # Hugging Face Spaces require running as a non-root user (switch at the end)
-RUN useradd -m -u 1000 user
+RUN useradd -m -u 1000 user && \
+    mkdir -p /data && \
+    chown -R user:user /data
+
+ENV HF_HOME="/data"
 USER user
 ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH
 
 WORKDIR $HOME/app
+
+# Pre-download all MinerU models into the Docker image so they do not download on wake
+RUN /bin/bash -c "mineru-models-download -s huggingface -m all"
 
 EXPOSE 8000
 
