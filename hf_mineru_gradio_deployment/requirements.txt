@@ -1,0 +1,4 @@
+mineru[all]>=3.4.0
+gradio>=4.0.0
+pymupdf
+huggingface_hub
