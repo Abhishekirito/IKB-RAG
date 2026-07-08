@@ -25,7 +25,7 @@ def process_pdf(api_key, pdf_file, backend, enable_ocr, layout_model, max_pages)
     env["MINERU_DEVICE_MODE"] = "cpu"
     
     # Construct the MinerU CLI command
-    command = ["mineru", "-p", file_path, "-o", output_dir]
+    command = ["mineru", "-p", file_path, "-o", output_dir, "--backend", backend]
     
     if enable_ocr:
         command.append("--is-ocr")
