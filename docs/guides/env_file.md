@@ -1,7 +1,7 @@
 # .env File Format
 
 Please follow below environment configuration variable names to create your *.env* file, we suggest you put it under
-`PATH-TO-PIKE-RAG/env_configs/` which has already been added to *.gitignore* file:
+`PATH-TO-IKB-RAG/env_configs/` which has already been added to *.gitignore* file:
 
 ## For Azure OpenAI Client
 
@@ -94,4 +94,4 @@ If you get error message "Specified deployment could not be found", it indicates
 server deployment location. In this case, you need to check the available model list in
 [Azure Machine Learning Studio](https://ml.azure.com/home) and update the YAML config again.
 
-*Return to the main [README](https://github.com/microsoft/PIKE-RAG/blob/main/README.md)*
+*Return to the main [README](https://github.com/microsoft/IKB-RAG/blob/main/README.md)*

@@ -6,7 +6,7 @@ In this document, we'll introduce how to run MuSiQue example step by step. To ru
 
 For open benchmarks like MuSiQue, we have already prepared the preprocessing scripts, running the existing scripts is enough for the testing suite preparation. File *data_process/open_benchmarks/config/musique.yml* shows an example setting for MuSiQue dataset processing. In case you want to try other open benchmarks, the suggested split setting can be found in file *data_process/open_benchmarks/config/datasets.yaml*.
 
-Assume that you are in the root directory of PIKE-RAG:
+Assume that you are in the root directory of IKB-RAG:
 
     ```sh
     # Install libraries required by the pre-processing
@@ -47,13 +47,13 @@ Further more, for testing on specific domains, you need to preprocess the testin
 
 Sometimes the performance is highly related to how you pre-process the raw documents. In scenarios where raw documents are in the format of multi-modal like PDF documents and your application pursues extreme performance, we suggest you to leverage the Document Intelligence (DI) tools (e.g., [Azure AI Document Intelligence](https://azure.microsoft.com/en-us/products/ai-services/ai-document-intelligence)) to pre-process the raw documents.
 
-Currently, we didn't provide scripts or components to integrate DI tools in PIKE-RAG. Please build up the DI-preprocessing pipeline according to your need.
+Currently, we didn't provide scripts or components to integrate DI tools in IKB-RAG. Please build up the DI-preprocessing pipeline according to your need.
 
 ## Step 3. Splitting original documents into chunks
 
 To reproduce the experiments in the [technical report](https://arxiv.org/abs/2501.11551), there is no need to run the chunking script. Instead, we extract the context paragraphs of these open benchmarks and aggregate them together as the reference chunk pool. File *data_process/retrieval_contexts_as_chunks.py* shows an example to extract the context paragraphs.
 
-Assume that you are in the root directory of PIKE-RAG:
+Assume that you are in the root directory of IKB-RAG:
 
     ```sh
     # Run script to extract the context paragraphs from the QA data.
@@ -93,7 +93,7 @@ We also supporting existing third party Splitters like `langchain.text_splitter.
 
 ## Step 4. Atomic Question Tagging (Optional)
 
-In current release version and in this MuSiQue example, we show a distillation method -- atomic question tagging. To tag atomic questions to MuSiQue sample set, assume that you are in the root directory of PIKE-RAG:
+In current release version and in this MuSiQue example, we show a distillation method -- atomic question tagging. To tag atomic questions to MuSiQue sample set, assume that you are in the root directory of IKB-RAG:
 
     ```sh
     python examples/tagging.py examples/musique/configs/tagging.yml
@@ -103,7 +103,7 @@ Once running finishes, you can find file *dev_500_retrieval_contexts_as_chunks_w
 
 ## Step 5. Question Answering
 
-For testing suite with `answer_labels`, evaluation can be done along with the question answering. To run retrieval based on the tagged atomic questions on MuSiQue, assume that you are in the root directory of PIKE-RAG:
+For testing suite with `answer_labels`, evaluation can be done along with the question answering. To run retrieval based on the tagged atomic questions on MuSiQue, assume that you are in the root directory of IKB-RAG:
 
     ```sh
     python examples/qa.py examples/musique/configs/atomic_decompose.yml
@@ -117,7 +117,7 @@ If you want to test different algorithms, adjust the answer flow in Workflow and
 
 *Skip the part below if you only need to run MuSiQue.*
 
-To run the evaluation workflow for answer logging `jsonlines` file following the format as PIKE-RAG generated, modify the *examples/evaluate.yml* file or create a new one referring to it, assume that you are in the root directory of PIKE-RAG:
+To run the evaluation workflow for answer logging `jsonlines` file following the format as IKB-RAG generated, modify the *examples/evaluate.yml* file or create a new one referring to it, assume that you are in the root directory of IKB-RAG:
 
     ```sh
     python examples/evaluate.py examples/evaluate.yml

@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "E:\github\ET HACK\PIKE-RAG-main\api.py", line 30, in query_endpoint
+    response = rag_engine.query(req.question, req.chat_id)
+  File "E:\github\ET HACK\PIKE-RAG-main\pikerag\utils\rag_utils.py", line 356, in query
+    search_result = self.qdrant.search(
+                    ^^^^^^^^^^^^^^^^^^
+AttributeError: 'QdrantClient' object has no attribute 'search'

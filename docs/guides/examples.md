@@ -36,4 +36,4 @@ Once you process existing QA data in the format as we used, you can evaluate it 
 python examples/evaluate.py PATH-TO-YAML-CONFIG
 ```
 
-*Return to the main [README](https://github.com/microsoft/PIKE-RAG/blob/main/README.md)*
+*Return to the main [README](https://github.com/microsoft/IKB-RAG/blob/main/README.md)*

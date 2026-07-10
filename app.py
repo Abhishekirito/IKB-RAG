@@ -12,7 +12,7 @@ from pikerag.utils.rag_utils import rag_engine
 def query_ikb(question, history):
     """
     This function receives the user's question, runs it through
-    the PIKE-RAG Vector RAG pipeline, and returns the answer.
+    the IKB-RAG Vector RAG pipeline, and returns the answer.
     """
     try:
         response = rag_engine.query(question)
@@ -44,7 +44,7 @@ def process_document(file_path):
 # -------------------------------------------------------------------
 with gr.Blocks(theme=gr.themes.Base()) as app:
     gr.Markdown("# 🏭 Industrial Knowledge Brain (IKB)")
-    gr.Markdown("Powered by PIKE-RAG, Neo4j, and Hugging Face Open-Source Models.")
+    gr.Markdown("Powered by IKB-RAG, Neo4j, and Hugging Face Open-Source Models.")
     
     with gr.Row():
         with gr.Column(scale=1):

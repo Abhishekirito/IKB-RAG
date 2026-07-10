@@ -13,7 +13,7 @@ from wikipediaapi import WikipediaPage, WikipediaPageSection
 from open_benchmarks.utils.io import dump_bytes_to_file, dump_texts_to_file, async_dump_bytes_to_file
 
 
-WIKI_WIKI = wikipediaapi.Wikipedia('Microsoft Research Asia PIKE-RAG', 'en')
+WIKI_WIKI = wikipediaapi.Wikipedia('Microsoft Research Asia IKB-RAG', 'en')
 
 
 def get_raw_bytes(url: str) -> bytes:

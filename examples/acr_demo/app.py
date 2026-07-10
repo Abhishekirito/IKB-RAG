@@ -12,8 +12,8 @@ from streamlit import session_state as state
 
 
 IMAGE_DIR: str = "images"
-LOGO_PATH: str = os.path.join(IMAGE_DIR, "logo/PIKE-RAG_vertical_black-font.png")
-ICON_PATH: str = os.path.join(IMAGE_DIR, "logo/PIKE-RAG_icon.svg")
+LOGO_PATH: str = os.path.join(IMAGE_DIR, "logo/IKB-RAG_vertical_black-font.png")
+ICON_PATH: str = os.path.join(IMAGE_DIR, "logo/IKB-RAG_icon.svg")
 LOGGING_PATH: str = "loggings.jsonl"
 
 
@@ -509,12 +509,12 @@ def history_atomic_selection_window(round_idx: int):
 
 ################################################################################
 
-st.set_page_config(layout="wide", page_title="PIKE-RAG", page_icon=ICON_PATH, initial_sidebar_state="expanded")
+st.set_page_config(layout="wide", page_title="IKB-RAG", page_icon=ICON_PATH, initial_sidebar_state="expanded")
 
 with st.sidebar:
     logo_cols = st.columns([3, 2], gap="small", vertical_alignment="bottom")
     logo_cols[0].image(LOGO_PATH)
-    logo_cols[1].markdown("[:grey[@GitHub]](https://github.com/microsoft/PIKE-RAG)")
+    logo_cols[1].markdown("[:grey[@GitHub]](https://github.com/microsoft/IKB-RAG)")
 
     st.subheader(":blue[Table of Content]", divider="blue")
     st.markdown(table_of_content)
@@ -538,7 +538,7 @@ with st.sidebar:
 
     st.markdown("")
     st.subheader(":green[Technical Report]", divider="green")
-    st.markdown("### [:green[🎓PIKE-RAG @arXiv]](https://arxiv.org/abs/2501.11551)")
+    st.markdown("### [:green[🎓IKB-RAG @arXiv]](https://arxiv.org/abs/2501.11551)")
 
 st.title("sPecIalized KnowledgE and Rationale Augmented Generation")
 

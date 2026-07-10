@@ -15,29 +15,64 @@ def cosine_similarity(v1, v2):
 
 class IKBRagEngine:
     def __init__(self):
-        print("Initializing Pure Python RAG Engine (Zero C++ dependencies!)...")
+        print("\n" + "="*50)
+        print("[*] INITIALIZING IKB-RAG ENGINE")
+        print("="*50)
+        
         self.hf_token = os.getenv("HF_TOKEN")
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         
-        # Initialize pure python database
+        # 1. Check Groq LLM Connection
+        if self.groq_api_key:
+            print("[SUCCESS] Groq API Key found (LLM Inference Ready)")
+        else:
+            print("[ERROR] Groq API Key missing! LLM queries will fail.")
+
+        # 2. Check Qdrant Cloud DB Connection
+        self.qdrant_url = os.getenv("QDRANT_URL", "")
+        self.qdrant_api_key = os.getenv("QDRANT_API_KEY", "")
+        self.use_qdrant = bool(self.qdrant_url and self.qdrant_api_key)
+        
         self.db_path = "./simple_vector_db.json"
         self.knowledge_base = []
-        if os.path.exists(self.db_path):
-            try:
-                with open(self.db_path, "r", encoding="utf-8") as f:
-                    self.knowledge_base = json.load(f)
-            except:
-                pass
         
-        # Initialize the Embeddings Client ONCE during startup
+        if self.use_qdrant:
+            from qdrant_client import QdrantClient
+            from qdrant_client.http.models import Distance, VectorParams
+            try:
+                self.qdrant = QdrantClient(url=self.qdrant_url, api_key=self.qdrant_api_key)
+                self.collection_name = "ikb_manuals"
+                if not self.qdrant.collection_exists(self.collection_name):
+                    self.qdrant.create_collection(
+                        collection_name=self.collection_name,
+                        vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+                    )
+                print("[SUCCESS] Qdrant Cloud connected successfully!")
+            except Exception as e:
+                print(f"[ERROR] Qdrant Connection Failed: {e}")
+                self.use_qdrant = False
+                
+        if not self.use_qdrant:
+            print("[WARNING] Qdrant unavailable. Falling back to simple_vector_db.json")
+            if os.path.exists(self.db_path):
+                try:
+                    with open(self.db_path, "r", encoding="utf-8") as f:
+                        self.knowledge_base = json.load(f)
+                except:
+                    pass
+        
+        # 3. Initialize the Embeddings Client ONCE during startup
         from gradio_client import Client
         space_id = "abhiswork/ikb-embeddings"
         try:
-            print("Connecting to Custom Embeddings Space...")
             self.embeddings_client = Client(space_id, token=self.hf_token)
+            print("[SUCCESS] Hugging Face Embeddings Space connected!")
         except Exception as e:
-            print(f"Failed to connect to embeddings space: {e}")
+            print(f"[ERROR] Embeddings space error: {e}")
             self.embeddings_client = None
+            
+        print("[SUCCESS] MinerU API configured for document processing.")
+        print("="*50 + "\n")
 
     def _get_hf_embeddings(self, texts):
         if not self.embeddings_client:
@@ -81,7 +116,7 @@ class IKBRagEngine:
             shutil.copy(file_path, saved_doc_path)
             
             # Send file to MinerU API
-            mineru_api_url = "https://abhiswork-mineru-api-ikb.hf.space/file_parse"
+            mineru_api_url = "https://abhiswork-ikb-mineru.hf.space/file_parse"
             print("🟢 Check service: Verifying MinerU API...")
             print("🟢 Submit: Uploading file to MinerU...")
             print(f"Sending document to MinerU: {mineru_api_url}")
@@ -122,76 +157,79 @@ class IKBRagEngine:
             os.makedirs(parsed_dir, exist_ok=True)
             
             with open(os.path.join(parsed_dir, "mineru_output.json"), "w", encoding="utf-8") as f:
-                json.dump(parsed_data, f, indent=2, ensure_ascii=False)
+                # Extract the pure content_list if available to match official JSON structure
+                json_to_save = parsed_data
+                if isinstance(parsed_data, dict) and "data" in parsed_data and "content_list" in parsed_data["data"]:
+                    if parsed_data["data"]["content_list"]:
+                        json_to_save = parsed_data["data"]["content_list"]
+                json.dump(json_to_save, f, indent=2, ensure_ascii=False)
                 
             with open(os.path.join(parsed_dir, "content.md"), "w", encoding="utf-8") as f:
                 f.write(text)
                 
-            # Also extract raw images using PyMuPDF for visual rendering in the chat
-            import fitz
-            try:
-                doc_pdf = fitz.open(file_path)
-                extracted_images_md = []
-                for page_num in range(len(doc_pdf)):
-                    page = doc_pdf.load_page(page_num)
-                    for img_index, img in enumerate(page.get_images(full=True)):
-                        xref = img[0]
-                        base_image = doc_pdf.extract_image(xref)
-                        img_filename = f"page{page_num+1}_img{img_index}.{base_image['ext']}"
-                        
-                        img_dir = os.path.join("static_images", str(chat_id), pdf_base)
-                        os.makedirs(img_dir, exist_ok=True)
-                        
-                        img_path = os.path.join(img_dir, img_filename)
-                        with open(img_path, "wb") as img_f:
-                            img_f.write(base_image["image"])
-                        
-                        img_url = f"http://localhost:8002/images/{chat_id}/{pdf_base}/{img_filename}"
-                        extracted_images_md.append(f"![Diagram from page {page_num+1}]({img_url})")
-                
-                if extracted_images_md:
-                    text += "\n\n### Extracted Diagrams:\n" + "\n".join(extracted_images_md)
-            except Exception as fitz_e:
-                print(f"Skipping PyMuPDF image extraction: {fitz_e}")
-                
-            # Prepend source tag for the LLM prompt instructions
+            # Save images if provided in the JSON from MinerU API
+            if isinstance(parsed_data, dict) and "data" in parsed_data and "images_base64" in parsed_data["data"]:
+                import base64
+                img_dir = os.path.join("static_images", str(chat_id), pdf_base)
+                os.makedirs(img_dir, exist_ok=True)
+                for img_name, b64_data in parsed_data["data"]["images_base64"].items():
+                    img_bytes = base64.b64decode(b64_data)
+                    # Handle if the name came with directory prefix e.g. images/xxx.jpg
+                    clean_name = os.path.basename(img_name)
+                    with open(os.path.join(img_dir, clean_name), "wb") as f:
+                        f.write(img_bytes)
+
             doc_url = f"http://localhost:8002/documents/{chat_id}/{base_name}"
-            text = f"\n[Source: {base_name}, Link: {doc_url}]\n\n" + text
+
             
         except Exception as e:
             raise Exception(f"Failed to process file {file_path}. Error: {str(e)}")
             
-        print("🟡 Build outputs: Extracting images and chunking text...")
-        # Since MinerU provides highly structured Markdown, we can chunk by double-newlines (paragraphs/tables)
+        print("🟡 Build outputs: Semantic Chunking via MinerU JSON...")
         chunks = []
         current_chunk = ""
-        max_chunk_size = 1500 
+        current_page_idx = 0
         
-        def add_block(b):
-            nonlocal current_chunk
-            if len(current_chunk) + len(b) < max_chunk_size:
-                current_chunk += b + "\n"
-            else:
-                if len(current_chunk.strip()) > 10:
-                    chunks.append(current_chunk.strip())
-                # If b is STILL larger than max_chunk_size (e.g. huge markdown table row), force split it
-                if len(b) > max_chunk_size:
-                    for i in range(0, len(b), max_chunk_size):
-                        chunks.append(b[i:i+max_chunk_size])
-                    current_chunk = ""
-                else:
-                    current_chunk = b + "\n"
-
-        for block in text.split("\n\n"):
-            if len(block) > max_chunk_size:
-                # Fallback to single newline split for massive blocks
-                for sub in block.split("\n"):
-                    add_block(sub)
-            else:
-                add_block(block + "\n")
+        # We chunk semantically by looking at the logical structure
+        content_list = []
+        if isinstance(parsed_data, dict) and "data" in parsed_data and "content_list" in parsed_data["data"]:
+            content_list = parsed_data["data"]["content_list"]
+            
+        for block in content_list:
+            if block.get("type") == "heading":
+                # A new heading means a new logical section. Push the old one.
+                if current_chunk.strip():
+                    page_fragment = f"#page={current_page_idx + 1}"
+                    chunks.append(f"[Source: {base_name}, Page: {current_page_idx + 1}, Link: {doc_url}{page_fragment}]\n\n" + current_chunk.strip())
+                current_chunk = block.get("text", "") + "\n"
+                current_page_idx = block.get("page_idx", current_page_idx)
+            elif block.get("type") == "text":
+                current_chunk += block.get("text", "") + "\n"
+                current_page_idx = block.get("page_idx", current_page_idx)
+            elif block.get("type") in ("table", "equation"):
+                # Always prioritize the rich html/latex version if available
+                current_chunk += block.get("html", block.get("text", "")) + "\n"
+                current_page_idx = block.get("page_idx", current_page_idx)
+            elif block.get("type") == "image":
+                # Directly embed the precise image diagram inline with its caption!
+                img_path = block.get("img_path", "")
+                img_filename = os.path.basename(img_path)
+                caption = " ".join(block.get("image_caption", []))
+                footnote = " ".join(block.get("image_footnote", []))
                 
-        if len(current_chunk.strip()) > 10:
-            chunks.append(current_chunk.strip())
+                img_url = f"http://localhost:8002/images/{chat_id}/{pdf_base}/{img_filename}"
+                current_chunk += f"\n![{caption}]({img_url})\n*{footnote}*\n"
+                current_page_idx = block.get("page_idx", current_page_idx)
+                
+        # Push the final section
+        if current_chunk.strip():
+            page_fragment = f"#page={current_page_idx + 1}"
+            chunks.append(f"[Source: {base_name}, Page: {current_page_idx + 1}, Link: {doc_url}{page_fragment}]\n\n" + current_chunk.strip())
+            
+        # Fallback if content_list was empty but we somehow have text (should rarely happen)
+        if not chunks and text.strip():
+            chunks = [f"[Source: {base_name}, Link: {doc_url}]\n\n" + text[i:i+1500] for i in range(0, len(text), 1500)]
+
                 
         print("🟡 Queue: Generating vector embeddings...")
         embeddings = self._get_hf_embeddings(chunks)
@@ -199,20 +237,35 @@ class IKBRagEngine:
         if isinstance(embeddings, dict) and "error" in embeddings:
             raise Exception(f"HF API Error: {embeddings['error']}")
             
-        print(f"Indexing {len(chunks)} chunks into Pure Python Vector DB...")
+        print(f"Indexing {len(chunks)} chunks into Vector DB...")
         
-        # Save to our custom JSON vector database
-        for i, chunk in enumerate(chunks):
-            self.knowledge_base.append({
-                "chat_id": chat_id,
-                "text": chunk,
-                "embedding": embeddings[i]
-            })
+        if self.use_qdrant:
+            from qdrant_client.http.models import PointStruct
+            import uuid
+            points = []
+            for i, chunk in enumerate(chunks):
+                point_id = str(uuid.uuid4())
+                points.append(PointStruct(
+                    id=point_id,
+                    vector=embeddings[i],
+                    payload={"chat_id": chat_id, "text": chunk, "source_file": base_name}
+                ))
             
-        with open(self.db_path, "w", encoding="utf-8") as f:
-            json.dump(self.knowledge_base, f)
+            self.qdrant.upsert(collection_name=self.collection_name, points=points)
+            print("🟢 Done: Saved to Qdrant Cloud!")
+        else:
+            # Save to our custom JSON vector database
+            for i, chunk in enumerate(chunks):
+                self.knowledge_base.append({
+                    "chat_id": chat_id,
+                    "text": chunk,
+                    "embedding": embeddings[i]
+                })
+                
+            with open(self.db_path, "w", encoding="utf-8") as f:
+                json.dump(self.knowledge_base, f)
+            print("🟢 Done: Saved to local JSON DB!")
             
-        print("🟢 Done: Saved to Vector DB!")
         print("="*50 + "\n")
         return len(chunks)
         
@@ -236,11 +289,19 @@ class IKBRagEngine:
 
     def delete_chat_data(self, chat_id):
         """Deletes all embeddings and files associated with a specific chat."""
-        # Remove from knowledge base
-        self.knowledge_base = [doc for doc in self.knowledge_base if doc.get("chat_id") != chat_id]
-        if os.path.exists(self.db_path):
-            with open(self.db_path, "w", encoding="utf-8") as f:
-                json.dump(self.knowledge_base, f)
+        if self.use_qdrant:
+            from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+            self.qdrant.delete(
+                collection_name=self.collection_name,
+                points_selector=Filter(
+                    must=[FieldCondition(key="chat_id", match=MatchValue(value=chat_id))]
+                )
+            )
+        else:
+            self.knowledge_base = [doc for doc in self.knowledge_base if doc.get("chat_id") != chat_id]
+            if os.path.exists(self.db_path):
+                with open(self.db_path, "w", encoding="utf-8") as f:
+                    json.dump(self.knowledge_base, f)
                 
         # Delete files from uploaded_documents
         if os.path.exists('uploaded_documents'):
@@ -267,9 +328,13 @@ class IKBRagEngine:
 
     def clear_knowledge_base(self):
         """Wipes the Vector DB, Document Store, Image Store, and Neo4j Graph DB."""
-        self.knowledge_base = []
-        if os.path.exists(self.db_path):
-            os.remove(self.db_path)
+        if self.use_qdrant:
+            try: self.qdrant.delete_collection(collection_name=self.collection_name)
+            except: pass
+        else:
+            self.knowledge_base = []
+            if os.path.exists(self.db_path):
+                os.remove(self.db_path)
             
         import shutil
         if os.path.exists('uploaded_documents'):
@@ -293,15 +358,24 @@ class IKBRagEngine:
         
         # Search our custom database for this specific chat
         print("Searching Knowledge Base...")
-        scores = []
-        for doc in self.knowledge_base:
-            if doc.get("chat_id") == chat_id:
-                score = cosine_similarity(q_emb, doc["embedding"])
-                scores.append((score, doc["text"]))
-            
-        # Sort by highest score first and get top 4
-        scores.sort(reverse=True, key=lambda x: x[0])
-        top_docs = [doc for score, doc in scores[:4]]
+        if self.use_qdrant:
+            from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+            search_result = self.qdrant.query_points(
+                collection_name=self.collection_name,
+                query=q_emb,
+                query_filter=Filter(must=[FieldCondition(key="chat_id", match=MatchValue(value=chat_id))]),
+                limit=4
+            )
+            top_docs = [hit.payload["text"] for hit in search_result.points]
+        else:
+            scores = []
+            for doc in self.knowledge_base:
+                if doc.get("chat_id") == chat_id:
+                    score = cosine_similarity(q_emb, doc["embedding"])
+                    scores.append((score, doc["text"]))
+                
+            scores.sort(reverse=True, key=lambda x: x[0])
+            top_docs = [doc for score, doc in scores[:4]]
         
         context = "\n\n".join(top_docs)
         
@@ -313,8 +387,9 @@ CRITICAL INSTRUCTIONS:
    - 🚨 Potential Root Causes
    - 🛠️ Step-by-Step Fix Procedures
    - ⚠️ Safety & Compliance Warnings
-2. If the retrieved context contains a string like '[Visual Reference Available at: X]', and the user asks about that equipment or symbol, you MUST start your response by displaying the image using standard Markdown: `![Diagram](/file=X)` (Make sure to include /file= before the path)
-3. ALWAYS cite your sources at the bottom of your response! You must provide a clickable Markdown link using the [Source, Page, Link] tags found in the context. Format it exactly like this: `[View Source: pump-manual.pdf (Page 4)](/file=<Link>)`.
+2. When the user asks for a diagram or figure (e.g. "show me Figure 1"), look precisely for standard markdown images `![Caption](url)` in the context. You MUST output this EXACT markdown image link in your response so the user can see it! Never modify the URL.
+3. ALWAYS cite your sources at the bottom of your response! You must provide a clickable Markdown link using the [Source, Page, Link] tags found in the context. Format it exactly like this: `[View Source: pump-manual.pdf (Page X)](<Link>)`. Do NOT modify the URL or prepend anything to it.
+4. STRICT GUARDRAIL: You are an INDUSTRIAL EXPERT. You must absolutely REFUSE to answer any questions that are completely unrelated to industrial equipment, factory operations, or the provided context. If the user asks for programming code (like C++, Python), general knowledge, or off-topic conversational questions, politely decline and remind them that you are an Industrial Diagnostics AI. Only provide coding answers if it explicitly relates to PLC/SCADA programming found in the industrial context.
 
 Context:
 {context}

@@ -25,3 +25,4 @@ gradio
 gradio_client
 neo4j
 python-dotenv
+qdrant-client

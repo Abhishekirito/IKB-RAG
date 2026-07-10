@@ -10,4 +10,4 @@ For help and questions about using this project, please create a **GitHub Discus
 
 ## Microsoft Support Policy
 
-Support for this **PIKE-RAG** is limited to the resources listed above.
+Support for this **IKB-RAG** is limited to the resources listed above.

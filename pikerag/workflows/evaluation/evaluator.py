@@ -37,7 +37,7 @@ class Evaluator:
     def _init_metrics(self, **kwargs) -> None:
         metric_class_list: List[BaseMetric] = []
 
-        # Step 1: Get pre-defined metrics in PIKE-RAG
+        # Step 1: Get pre-defined metrics in IKB-RAG
         metric_module = importlib.import_module("pikerag.workflows.evaluation.metrics")
         for metric_name in self._evaluator_config.get("metrics", []):
             metric_class = getattr(metric_module, metric_name)

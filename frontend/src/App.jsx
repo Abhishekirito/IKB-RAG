@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-import { Bot, User, Send, FileText, Plus, MessageSquare, Upload, X, Loader2, Link, MoreVertical, Edit2, Trash2, RefreshCw } from 'lucide-react';
+import { Bot, User, Send, FileText, Plus, MessageSquare, Upload, X, Loader2, Link, MoreVertical, Edit2, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8002';
 
@@ -296,7 +296,7 @@ export default function App() {
       console.error(err);
       setChats(prev => prev.map(c => {
         if (c.id === currentChatId) {
-          return { ...c, messages: [...c.messages, { role: 'ai', content: '⚠️ Error connecting to PIKE-RAG engine.' }] };
+          return { ...c, messages: [...c.messages, { role: 'ai', content: '⚠️ Error connecting to IKB-RAG engine.' }] };
         }
         return c;
       }));
@@ -321,7 +321,7 @@ export default function App() {
       {/* Sidebar */}
       <div className="sidebar">
         <div className="brand">
-          <Bot size={28} /> PIKE-RAG
+          <Bot size={28} /> IKB-RAG
         </div>
 
         <button className="new-chat-btn" onClick={createNewChat}>
@@ -446,7 +446,13 @@ export default function App() {
                     </div>
                   ) : (
                     <div className={msg.role === 'system' ? 'system-msg' : ''}>
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          a: ({node, ...props}) => <a target="_blank" rel="noopener noreferrer" {...props} />
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
                     </div>
                   )}
                 </div>
@@ -474,7 +480,7 @@ export default function App() {
               </label>
               <input 
                 type="text" 
-                placeholder="Ask PIKE-RAG about your equipment..." 
+                placeholder="Ask IKB-RAG about your equipment..." 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={isTyping}
@@ -507,13 +513,13 @@ export default function App() {
       {chatToDelete && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3>Delete Chat?</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '24px' }}>
+            <h3><AlertTriangle size={24} /> Delete Chat?</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.5', marginBottom: '24px' }}>
               Are you sure you want to delete this chat? All uploaded PDFs, extracted images, and parsed data associated with this chat will be permanently erased.
             </p>
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setChatToDelete(null)}>Cancel</button>
-              <button className="btn-primary" style={{ background: '#ef4444' }} onClick={confirmDeleteChat}>Delete Permanently</button>
+              <button className="btn-danger" onClick={confirmDeleteChat}>Delete Permanently</button>
             </div>
           </div>
         </div>

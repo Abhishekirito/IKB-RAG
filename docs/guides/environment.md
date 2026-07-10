@@ -3,7 +3,7 @@
 ## Clone This Repository
 
 ```sh
-git clone https://github.com/microsoft/PIKE-RAG.git
+git clone https://github.com/microsoft/IKB-RAG.git
 ```
 
 ## Set Up Python Environment
@@ -35,4 +35,4 @@ export PYTHONPATH=PATH-TO-THIS-REPO
 export PYTHONPATH=$PWD
 ```
 
-*Return to the main [README](https://github.com/microsoft/PIKE-RAG/blob/main/README.md)*
+*Return to the main [README](https://github.com/microsoft/IKB-RAG/blob/main/README.md)*

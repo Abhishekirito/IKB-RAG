@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from pikerag.utils.rag_utils import rag_engine
 
-app = FastAPI(title="PIKE-RAG API")
+app = FastAPI(title="IKB-RAG API")
 
 # Enable CORS for the React frontend
 app.add_middleware(
@@ -30,6 +30,9 @@ async def query_endpoint(req: QueryRequest):
         response = rag_engine.query(req.question, req.chat_id)
         return {"answer": response}
     except Exception as e:
+        import traceback
+        with open("error_log.txt", "w", encoding="utf-8") as f:
+            f.write(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/upload")
@@ -49,6 +52,9 @@ async def upload_document(chat_id: str = Form(...), file: UploadFile = File(...)
         num_chunks = rag_engine.index_document(temp_path, chat_id)
         return {"message": f"Document {file.filename} processed! {num_chunks} chunks indexed.", "filename": file.filename}
     except Exception as e:
+        import traceback
+        with open("error_log.txt", "w", encoding="utf-8") as f:
+            f.write(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         # Clean up the un-prefixed temp file if it wasn't moved
@@ -76,9 +82,18 @@ async def get_document(chat_id: str, filename: str):
 
 @app.get("/images/{chat_id}/{pdf_base}/{filename}")
 async def get_image(chat_id: str, pdf_base: str, filename: str):
-    file_path = os.path.join("static_images", str(chat_id), pdf_base, filename)
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
+    import glob
+    base_dir = os.path.join("static_images", str(chat_id), pdf_base)
+    # Strip extension from the requested filename
+    name_without_ext = os.path.splitext(filename)[0]
+    
+    # Search for any file with that name regardless of extension
+    search_pattern = os.path.join(base_dir, f"{name_without_ext}.*")
+    matches = glob.glob(search_pattern)
+    
+    if matches:
+        return FileResponse(matches[0])
+        
     raise HTTPException(status_code=404, detail="Image not found")
 
 @app.delete("/chat/{chat_id}")
