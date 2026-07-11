@@ -474,18 +474,18 @@ export default function App() {
 
           <div className="input-area">
             <form className="input-box" onSubmit={sendMessage}>
-              <label className="chat-upload-btn" title="Upload Document">
+              <label className="chat-upload-btn" title="Upload Document" style={{ opacity: uploading ? 0.5 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
                 {uploading ? <Loader2 className="animate-spin" size={18} /> : <Plus size={20} />}
-                <input type="file" hidden accept=".pdf,.docx,.txt" onChange={handleFileUpload} />
+                <input type="file" hidden accept=".pdf,.docx,.txt" onChange={handleFileUpload} disabled={uploading || isTyping} />
               </label>
               <input 
                 type="text" 
-                placeholder="Ask IKB-RAG about your equipment..." 
+                placeholder={uploading ? "Processing document..." : "Ask IKB-RAG about your equipment..."} 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                disabled={isTyping}
+                disabled={isTyping || uploading}
               />
-              <button type="submit" className="send-btn" disabled={!input.trim() || isTyping}>
+              <button type="submit" className="send-btn" disabled={!input.trim() || isTyping || uploading}>
                 <Send size={18} />
               </button>
             </form>
