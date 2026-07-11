@@ -185,48 +185,73 @@ class IKBRagEngine:
         except Exception as e:
             raise Exception(f"Failed to process file {file_path}. Error: {str(e)}")
             
-        print("🟡 Build outputs: Semantic Chunking via MinerU JSON...")
+        print("🟡 Build outputs: Pure Page-Level Chunking (1 Chunk = 1 Page)...")
         chunks = []
-        current_chunk = ""
-        current_page_idx = 0
         
-        # We chunk semantically by looking at the logical structure
+        # Dictionary to hold the aggregated content for each page
+        page_contents = {}
+        
+        # Safely extract content_list whether MinerU wrapped it in "data" or returned a direct list
         content_list = []
         if isinstance(parsed_data, dict) and "data" in parsed_data and "content_list" in parsed_data["data"]:
             content_list = parsed_data["data"]["content_list"]
+        elif isinstance(parsed_data, list): 
+            content_list = parsed_data
             
         for block in content_list:
-            if block.get("type") == "heading":
-                # A new heading means a new logical section. Push the old one.
-                if current_chunk.strip():
-                    page_fragment = f"#page={current_page_idx + 1}"
-                    chunks.append(f"[Source: {base_name}, Page: {current_page_idx + 1}, Link: {doc_url}{page_fragment}]\n\n" + current_chunk.strip())
-                current_chunk = block.get("text", "") + "\n"
-                current_page_idx = block.get("page_idx", current_page_idx)
-            elif block.get("type") == "text":
-                current_chunk += block.get("text", "") + "\n"
-                current_page_idx = block.get("page_idx", current_page_idx)
-            elif block.get("type") in ("table", "equation"):
-                # Always prioritize the rich html/latex version if available
-                current_chunk += block.get("html", block.get("text", "")) + "\n"
-                current_page_idx = block.get("page_idx", current_page_idx)
-            elif block.get("type") == "image":
-                # Directly embed the precise image diagram inline with its caption!
+            p_idx = block.get("page_idx", 0)
+            b_type = block.get("type")
+            
+            # 1. Skip layout noise so it doesn't pollute the Vector DB
+            if b_type in ["header", "footer", "page_number"]:
+                continue
+                
+            # 2. Initialize the page in our dictionary if it doesn't exist yet
+            if p_idx not in page_contents:
+                page_contents[p_idx] = ""
+                
+            # 3. Append content to the specific page's bucket
+            if b_type == "text":
+                page_contents[p_idx] += block.get("text", "") + "\n\n"
+                
+            elif b_type == "table":
+                # Extract HTML table format safely
+                table_content = block.get("table_body", block.get("text", ""))
+                page_contents[p_idx] += table_content + "\n\n"
+                
+            elif b_type == "equation":
+                eq_content = block.get("equation_body", block.get("text", ""))
+                page_contents[p_idx] += eq_content + "\n\n"
+                
+            elif b_type == "image":
+                # Extract image path and names
                 img_path = block.get("img_path", "")
                 img_filename = os.path.basename(img_path)
-                caption = " ".join(block.get("image_caption", []))
-                footnote = " ".join(block.get("image_footnote", []))
-                
                 img_url = f"http://localhost:8002/images/{chat_id}/{pdf_base}/{img_filename}"
-                current_chunk += f"\n![{caption}]({img_url})\n*{footnote}*\n"
-                current_page_idx = block.get("page_idx", current_page_idx)
                 
-        # Push the final section
-        if current_chunk.strip():
-            page_fragment = f"#page={current_page_idx + 1}"
-            chunks.append(f"[Source: {base_name}, Page: {current_page_idx + 1}, Link: {doc_url}{page_fragment}]\n\n" + current_chunk.strip())
-            
-        # Fallback if content_list was empty but we somehow have text (should rarely happen)
+                # Safely parse captions and footnotes (MinerU uses lists here)
+                cap = block.get("image_caption", "")
+                caption = " ".join(cap) if isinstance(cap, list) else str(cap)
+                
+                foot = block.get("image_footnote", "")
+                footnote = " ".join(foot) if isinstance(foot, list) else str(foot)
+                
+                # Build clean markdown
+                img_md = f"![{caption.strip()}]({img_url})"
+                if footnote.strip():
+                    img_md += f"\n*{footnote.strip()}*"
+                    
+                page_contents[p_idx] += img_md + "\n\n"
+
+        # 4. Finalize chunks (Convert buckets to final Qdrant payloads)
+        # Using sorted() ensures chunks are appended in page order
+        for p_idx, text_content in sorted(page_contents.items()):
+            if text_content.strip():
+                actual_page = p_idx + 1 # MinerU is 0-indexed
+                page_fragment = f"#page={actual_page}"
+                chunks.append(f"[Source: {base_name}, Page: {actual_page}, Link: {doc_url}{page_fragment}]\n\n" + text_content.strip())
+                
+        # 5. Fallback if content_list was empty but we somehow have raw text
         if not chunks and text.strip():
             chunks = [f"[Source: {base_name}, Link: {doc_url}]\n\n" + text[i:i+1500] for i in range(0, len(text), 1500)]
 
@@ -346,36 +371,102 @@ class IKBRagEngine:
             
         return "✅ Successfully erased Vector DB and File Storage!"
 
-    def query(self, question: str, chat_id: str = "default"):
-        """Retrieves context and generates an answer via Groq API."""
-        print(f"Retrieving context for: {question} in chat {chat_id}")
-        
-        # Embed question
-        emb_result = self._get_hf_embeddings([question])
+    def _call_groq(self, prompt: str, temperature=0.1, json_mode=False):
+        """Helper to call Groq API"""
+        headers = {
+            "Authorization": f"Bearer {self.groq_api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature
+        }
+        if json_mode:
+            data["response_format"] = {"type": "json_object"}
+            
+        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=data)
+        if response.status_code == 200:
+            return response.json()['choices'][0]['message']['content']
+        else:
+            print(f"Groq API Error: {response.text}")
+            return None
+
+    def _retrieve_context(self, q_str: str, chat_id: str, limit: int = 4):
+        """Helper to retrieve vector chunks from the database"""
+        emb_result = self._get_hf_embeddings([q_str])
         if isinstance(emb_result, dict) and "error" in emb_result:
-            return f"HF API Error: {emb_result['error']}"
+            print(f"HF API Error: {emb_result['error']}")
+            return []
+            
         q_emb = emb_result[0]
-        
-        # Search our custom database for this specific chat
-        print("Searching Knowledge Base...")
         if self.use_qdrant:
             from qdrant_client.http.models import Filter, FieldCondition, MatchValue
             search_result = self.qdrant.query_points(
                 collection_name=self.collection_name,
                 query=q_emb,
                 query_filter=Filter(must=[FieldCondition(key="chat_id", match=MatchValue(value=chat_id))]),
-                limit=4
+                limit=limit
             )
-            top_docs = [hit.payload["text"] for hit in search_result.points]
+            return [hit.payload["text"] for hit in search_result.points]
         else:
             scores = []
             for doc in self.knowledge_base:
                 if doc.get("chat_id") == chat_id:
                     score = cosine_similarity(q_emb, doc["embedding"])
                     scores.append((score, doc["text"]))
-                
             scores.sort(reverse=True, key=lambda x: x[0])
-            top_docs = [doc for score, doc in scores[:4]]
+            return [doc for score, doc in scores[:limit]]
+
+    def query(self, question: str, chat_id: str = "default"):
+        """Agentic RAG: Routes query, decomposes if complex, retrieves context, and generates answer."""
+        print(f"\n[AGENT] Analyzing query intent for: '{question}'")
+        
+        # Agent 1: Router
+        router_prompt = f"""You are an intelligent query router. Analyze the following user question.
+If it is a simple factual question requiring a single search, classify as 'SIMPLE'.
+If it is a complex, multi-part, or troubleshooting question requiring deep context, classify as 'COMPLEX'.
+Output JSON strictly in this format: {{"intent": "SIMPLE"}} or {{"intent": "COMPLEX"}}.
+Question: {question}"""
+        
+        router_response = self._call_groq(router_prompt, json_mode=True)
+        intent = "SIMPLE"
+        try:
+            if router_response:
+                intent = json.loads(router_response).get("intent", "SIMPLE")
+        except: pass
+        
+        print(f"[AGENT] Routing Decision: {intent}")
+        
+        top_docs = []
+        if intent == "COMPLEX":
+            # Agent 2: Decomposer
+            print("[AGENT] Triggering QA Decomposer...")
+            decomp_prompt = f"""You are an Expert Industrial Decomposer. Break the following complex user query into independent sub-queries required to search a vector database.
+Generate between 2 to 4 sub-queries depending on complexity. 
+Output JSON strictly in this format: {{"sub_queries": ["query 1", "query 2"]}}
+Question: {question}"""
+            
+            decomp_response = self._call_groq(decomp_prompt, json_mode=True)
+            sub_queries = [question] # Fallback
+            try:
+                if decomp_response:
+                    sub_queries = json.loads(decomp_response).get("sub_queries", [question])
+            except: pass
+            
+            print(f"[AGENT] Decomposed into {len(sub_queries)} sub-queries: {sub_queries}")
+            
+            all_docs = []
+            for sub_q in sub_queries:
+                docs = self._retrieve_context(sub_q, chat_id, limit=2)
+                all_docs.extend(docs)
+                
+            # Deduplicate chunks
+            top_docs = list(set(all_docs))
+            print(f"[AGENT] Retrieved {len(top_docs)} unique context chunks across all sub-queries.")
+        else:
+            # Standard RAG
+            top_docs = self._retrieve_context(question, chat_id, limit=4)
         
         context = "\n\n".join(top_docs)
         
@@ -398,22 +489,8 @@ Question: {question}
 
 Answer:"""
         
-        print("Generating response via Groq Cloud API...")
-        headers = {
-            "Authorization": f"Bearer {self.groq_api_key}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": "llama-3.3-70b-versatile",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.3
-        }
-        
-        response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=data)
-        if response.status_code == 200:
-            return response.json()['choices'][0]['message']['content']
-        else:
-            return f"Groq API Error: {response.text}"
+        print("[AGENT] Synthesizing final response via Groq...")
+        return self._call_groq(prompt, temperature=0.3) or "Error generating response."
 
 # Singleton instance
 rag_engine = IKBRagEngine()
