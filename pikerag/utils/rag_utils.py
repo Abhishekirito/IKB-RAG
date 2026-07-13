@@ -21,6 +21,7 @@ class IKBRagEngine:
         
         self.hf_token = os.getenv("HF_TOKEN")
         self.groq_api_key = os.getenv("GROQ_API_KEY")
+        self.nomic_api_key = os.getenv("NOMIC_API_KEY")
         
         # 1. Check Groq LLM Connection
         if self.groq_api_key:
@@ -41,11 +42,11 @@ class IKBRagEngine:
             from qdrant_client.http.models import Distance, VectorParams
             try:
                 self.qdrant = QdrantClient(url=self.qdrant_url, api_key=self.qdrant_api_key)
-                self.collection_name = "ikb_manuals"
+                self.collection_name = "nomic-manual"
                 if not self.qdrant.collection_exists(self.collection_name):
                     self.qdrant.create_collection(
                         collection_name=self.collection_name,
-                        vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+                        vectors_config=VectorParams(size=768, distance=Distance.COSINE),
                     )
                 print("[SUCCESS] Qdrant Cloud connected successfully!")
             except Exception as e:
@@ -61,32 +62,37 @@ class IKBRagEngine:
                 except:
                     pass
         
-        # 3. Initialize the Embeddings Client ONCE during startup
-        from gradio_client import Client
-        space_id = "abhiswork/ikb-embeddings"
-        try:
-            self.embeddings_client = Client(space_id, token=self.hf_token)
-            print("[SUCCESS] Hugging Face Embeddings Space connected!")
-        except Exception as e:
-            print(f"[ERROR] Embeddings space error: {e}")
-            self.embeddings_client = None
+        # 3. Nomic Embeddings API configuration
+        if self.nomic_api_key:
+            print("[SUCCESS] Nomic API Key found (Embeddings Ready)")
+        else:
+            print("[WARNING] NOMIC_API_KEY missing! Embeddings will fail unless provided.")
             
         print("[SUCCESS] MinerU API configured for document processing.")
         print("="*50 + "\n")
 
-    def _get_hf_embeddings(self, texts):
-        if not self.embeddings_client:
-            return {"error": "Embeddings client not connected"}
+    def _get_embeddings(self, texts, task_type="search_document"):
+        if not self.nomic_api_key:
+            return {"error": "Nomic API Key not provided"}
             
         try:
-            # The API name is automatically set to the python function name by Gradio
-            result_json = self.embeddings_client.predict(json.dumps(texts), api_name="/generate_embeddings")
-            result = json.loads(result_json)
-            if isinstance(result, dict) and "error" in result:
-                raise Exception(result["error"])
-            return result
+            headers = {
+                "Authorization": f"Bearer {self.nomic_api_key}",
+                "Content-Type": "application/json"
+            }
+            # Nomic API handles batching seamlessly on their massive GPU clusters
+            payload = {
+                "model": "nomic-embed-text-v1.5",
+                "texts": texts,
+                "task_type": task_type
+            }
+            response = requests.post("https://api-atlas.nomic.ai/v1/embedding/text", headers=headers, json=payload)
+            if response.status_code == 200:
+                return response.json().get('embeddings', [])
+            else:
+                return {"error": f"HTTP {response.status_code} - {response.text}"}
         except Exception as e:
-            print(f"Custom Embedding Space Error: {e}")
+            print(f"Nomic API Error: {e}")
             return {"error": str(e)}
 
     def index_document(self, file_path, chat_id="default"):
@@ -185,8 +191,9 @@ class IKBRagEngine:
         except Exception as e:
             raise Exception(f"Failed to process file {file_path}. Error: {str(e)}")
             
-        print("🟡 Build outputs: Pure Page-Level Chunking (1 Chunk = 1 Page)...")
-        chunks = []
+        print("🟡 Build outputs: Structural Element Chunking (with Page Context)...")
+        raw_elements = []
+        payloads = []
         
         # Dictionary to hold the aggregated content for each page
         page_contents = {}
@@ -198,93 +205,117 @@ class IKBRagEngine:
         elif isinstance(parsed_data, list): 
             content_list = parsed_data
             
+        # First Pass: Build the full_page_context for every page
         for block in content_list:
             p_idx = block.get("page_idx", 0)
             b_type = block.get("type")
             
-            # 1. Skip layout noise so it doesn't pollute the Vector DB
-            if b_type in ["header", "footer", "page_number"]:
-                continue
+            if b_type in ["header", "footer", "page_number"]: continue
+            if p_idx not in page_contents: page_contents[p_idx] = ""
                 
-            # 2. Initialize the page in our dictionary if it doesn't exist yet
-            if p_idx not in page_contents:
-                page_contents[p_idx] = ""
-                
-            # 3. Append content to the specific page's bucket
             if b_type == "text":
                 page_contents[p_idx] += block.get("text", "") + "\n\n"
-                
             elif b_type == "table":
-                # Extract HTML table format safely
-                table_content = block.get("table_body", block.get("text", ""))
-                page_contents[p_idx] += table_content + "\n\n"
-                
+                page_contents[p_idx] += block.get("table_body", block.get("text", "")) + "\n\n"
             elif b_type == "equation":
-                eq_content = block.get("equation_body", block.get("text", ""))
-                page_contents[p_idx] += eq_content + "\n\n"
-                
+                page_contents[p_idx] += block.get("equation_body", block.get("text", "")) + "\n\n"
             elif b_type == "image":
-                # Extract image path and names
                 img_path = block.get("img_path", "")
                 img_filename = os.path.basename(img_path)
                 img_url = f"http://localhost:8002/images/{chat_id}/{pdf_base}/{img_filename}"
-                
-                # Safely parse captions and footnotes (MinerU uses lists here)
                 cap = block.get("image_caption", "")
                 caption = " ".join(cap) if isinstance(cap, list) else str(cap)
-                
                 foot = block.get("image_footnote", "")
                 footnote = " ".join(foot) if isinstance(foot, list) else str(foot)
-                
-                # Build clean markdown
                 img_md = f"![{caption.strip()}]({img_url})"
-                if footnote.strip():
-                    img_md += f"\n*{footnote.strip()}*"
-                    
+                if footnote.strip(): img_md += f"\n*{footnote.strip()}*"
                 page_contents[p_idx] += img_md + "\n\n"
 
-        # 4. Finalize chunks (Convert buckets to final Qdrant payloads)
-        # Using sorted() ensures chunks are appended in page order
-        for p_idx, text_content in sorted(page_contents.items()):
-            if text_content.strip():
-                actual_page = p_idx + 1 # MinerU is 0-indexed
-                page_fragment = f"#page={actual_page}"
-                chunks.append(f"[Source: {base_name}, Page: {actual_page}, Link: {doc_url}{page_fragment}]\n\n" + text_content.strip())
+        # Second Pass: Create isolated vectors for every structural element
+        for block in content_list:
+            p_idx = block.get("page_idx", 0)
+            b_type = block.get("type")
+            
+            if b_type in ["header", "footer", "page_number"]: continue
+            
+            element_content = ""
+            if b_type == "text":
+                element_content = block.get("text", "")
+            elif b_type == "table":
+                element_content = block.get("table_body", block.get("text", ""))
+            elif b_type == "equation":
+                element_content = block.get("equation_body", block.get("text", ""))
+            elif b_type == "image":
+                img_path = block.get("img_path", "")
+                img_filename = os.path.basename(img_path)
+                img_url = f"http://localhost:8002/images/{chat_id}/{pdf_base}/{img_filename}"
+                cap = block.get("image_caption", "")
+                caption = " ".join(cap) if isinstance(cap, list) else str(cap)
+                foot = block.get("image_footnote", "")
+                footnote = " ".join(foot) if isinstance(foot, list) else str(foot)
+                element_content = f"![{caption.strip()}]({img_url})"
+                if footnote.strip(): element_content += f"\n*{footnote.strip()}*"
                 
-        # 5. Fallback if content_list was empty but we somehow have raw text
-        if not chunks and text.strip():
-            chunks = [f"[Source: {base_name}, Link: {doc_url}]\n\n" + text[i:i+1500] for i in range(0, len(text), 1500)]
+            if not element_content.strip(): continue
+                
+            actual_page = p_idx + 1
+            page_fragment = f"#page={actual_page}"
+            
+            # The formatted text Groq will see (contains element + full page context)
+            formatted_text = f"[Source: {base_name}, Page: {actual_page}, Link: {doc_url}{page_fragment}]\n"
+            formatted_text += f"Element Matched: {element_content.strip()}\n"
+            formatted_text += f"Full Page Context: {page_contents.get(p_idx, '').strip()}"
+            
+            raw_elements.append(element_content.strip())
+            payloads.append({
+                "chat_id": chat_id, 
+                "text": formatted_text, 
+                "source_file": base_name
+            })
+                
+        # Fallback if content_list was empty
+        if not raw_elements and text.strip():
+            for i in range(0, len(text), 1500):
+                chunk = text[i:i+1500]
+                raw_elements.append(chunk)
+                payloads.append({
+                    "chat_id": chat_id, 
+                    "text": f"[Source: {base_name}, Link: {doc_url}]\n\n{chunk}", 
+                    "source_file": base_name
+                })
 
-                
-        print("🟡 Queue: Generating vector embeddings...")
-        embeddings = self._get_hf_embeddings(chunks)
+        print("🟡 Queue: Generating vector embeddings via Nomic API...")
+        embeddings = self._get_embeddings(raw_elements, task_type="search_document")
         
         if isinstance(embeddings, dict) and "error" in embeddings:
-            raise Exception(f"HF API Error: {embeddings['error']}")
+            raise Exception(f"Nomic API Error: {embeddings['error']}")
             
-        print(f"Indexing {len(chunks)} chunks into Vector DB...")
+        print(f"Indexing {len(raw_elements)} chunks into Vector DB...")
         
         if self.use_qdrant:
             from qdrant_client.http.models import PointStruct
             import uuid
             points = []
-            for i, chunk in enumerate(chunks):
-                point_id = str(uuid.uuid4())
+            for i, emb in enumerate(embeddings):
                 points.append(PointStruct(
-                    id=point_id,
-                    vector=embeddings[i],
-                    payload={"chat_id": chat_id, "text": chunk, "source_file": base_name}
+                    id=str(uuid.uuid4()),
+                    vector=emb,
+                    payload=payloads[i]
                 ))
             
-            self.qdrant.upsert(collection_name=self.collection_name, points=points)
-            print("🟢 Done: Saved to Qdrant Cloud!")
+            try:
+                self.qdrant.upsert(collection_name=self.collection_name, points=points)
+                print("🟢 Done: Saved to Qdrant Cloud!")
+            except Exception as e:
+                print(f"[ERROR] Qdrant Upsert Failed: {e}")
+                raise e
         else:
             # Save to our custom JSON vector database
-            for i, chunk in enumerate(chunks):
+            for i, emb in enumerate(embeddings):
                 self.knowledge_base.append({
-                    "chat_id": chat_id,
-                    "text": chunk,
-                    "embedding": embeddings[i]
+                    "chat_id": payloads[i]["chat_id"],
+                    "text": payloads[i]["text"],
+                    "embedding": emb
                 })
                 
             with open(self.db_path, "w", encoding="utf-8") as f:
@@ -292,7 +323,7 @@ class IKBRagEngine:
             print("🟢 Done: Saved to local JSON DB!")
             
         print("="*50 + "\n")
-        return len(chunks)
+        return len(raw_elements)
         
     def refresh_chat_data(self, chat_id):
         """Re-indexes all documents associated with a specific chat."""
@@ -316,12 +347,15 @@ class IKBRagEngine:
         """Deletes all embeddings and files associated with a specific chat."""
         if self.use_qdrant:
             from qdrant_client.http.models import Filter, FieldCondition, MatchValue
-            self.qdrant.delete(
-                collection_name=self.collection_name,
-                points_selector=Filter(
-                    must=[FieldCondition(key="chat_id", match=MatchValue(value=chat_id))]
+            try:
+                self.qdrant.delete(
+                    collection_name=self.collection_name,
+                    points_selector=Filter(
+                        must=[FieldCondition(key="chat_id", match=MatchValue(value=chat_id))]
+                    )
                 )
-            )
+            except Exception as e:
+                print(f"[WARNING] Qdrant deletion failed (Index may not exist yet): {e}")
         else:
             self.knowledge_base = [doc for doc in self.knowledge_base if doc.get("chat_id") != chat_id]
             if os.path.exists(self.db_path):
@@ -394,9 +428,9 @@ class IKBRagEngine:
 
     def _retrieve_context(self, q_str: str, chat_id: str, limit: int = 4):
         """Helper to retrieve vector chunks from the database"""
-        emb_result = self._get_hf_embeddings([q_str])
+        emb_result = self._get_embeddings([q_str], task_type="search_query")
         if isinstance(emb_result, dict) and "error" in emb_result:
-            print(f"HF API Error: {emb_result['error']}")
+            print(f"Nomic API Error: {emb_result['error']}")
             return []
             
         q_emb = emb_result[0]
@@ -466,21 +500,25 @@ Question: {question}"""
             print(f"[AGENT] Retrieved {len(top_docs)} unique context chunks across all sub-queries.")
         else:
             # Standard RAG
-            top_docs = self._retrieve_context(question, chat_id, limit=4)
-        
+            top_docs = self._retrieve_context(question, chat_id, limit=2)
         context = "\n\n".join(top_docs)
+        
+        # Hard limit to prevent Groq TPM crashes (~4000 tokens)
+        if len(context) > 15000:
+            context = context[:15000] + "\n\n...[Context Truncated to prevent Rate Limits]..."
         
         prompt = f"""You are the ultimate Industrial Knowledge Copilot for field technicians.
 You have access to heterogeneous industrial document corpora including OEM manuals, SOPs, and P&ID diagrams.
 
 CRITICAL INSTRUCTIONS:
-1. If the user asks about an equipment failure or troubleshooting, ALWAYS format your answer as a Root Cause Analysis (RCA) Checklist:
+1. Use the 'Element Matched' and 'Full Page Context' blocks in the provided context to answer the question with maximum precision.
+2. If the user asks about an equipment failure or troubleshooting, ALWAYS use the 'Full Page Context' to format your answer as a Root Cause Analysis (RCA) Checklist:
    - 🚨 Potential Root Causes
    - 🛠️ Step-by-Step Fix Procedures
    - ⚠️ Safety & Compliance Warnings
-2. When the user asks for a diagram or figure (e.g. "show me Figure 1"), look precisely for standard markdown images `![Caption](url)` in the context. You MUST output this EXACT markdown image link in your response so the user can see it! Never modify the URL.
-3. ALWAYS cite your sources at the bottom of your response! You must provide a clickable Markdown link using the [Source, Page, Link] tags found in the context. Format it exactly like this: `[View Source: pump-manual.pdf (Page X)](<Link>)`. Do NOT modify the URL or prepend anything to it.
-4. STRICT GUARDRAIL: You are an INDUSTRIAL EXPERT. You must absolutely REFUSE to answer any questions that are completely unrelated to industrial equipment, factory operations, or the provided context. If the user asks for programming code (like C++, Python), general knowledge, or off-topic conversational questions, politely decline and remind them that you are an Industrial Diagnostics AI. Only provide coding answers if it explicitly relates to PLC/SCADA programming found in the industrial context.
+3. When the user asks for a diagram or figure, look for standard markdown images `![Caption](url)` inside the 'Element Matched' fields. You MUST output this EXACT markdown image link in your response so the user can see it!
+4. ALWAYS cite your sources at the bottom of your response using the [Source, Page, Link] tags found at the top of the context block. Format exactly like this: `[View Source: manual.pdf (Page X)](<Link>)`.
+5. STRICT GUARDRAIL: You are an INDUSTRIAL EXPERT. You must absolutely REFUSE to answer any questions that are unrelated to industrial equipment or the provided context.
 
 Context:
 {context}

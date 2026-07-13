@@ -11,7 +11,7 @@ To run this application locally, you need to start both the Python backend and t
 ### 1. Prerequisites
 - Python 3.9+
 - Node.js & npm
-- Valid API Keys for Hugging Face, Groq, and Qdrant Cloud.
+- Valid API Keys for Hugging Face, Groq, Nomic, and Qdrant Cloud.
 
 ### 2. Backend Setup (FastAPI & RAG Engine)
 Open a terminal in the root folder (`IKB-RAG-main`) and run:
@@ -23,6 +23,7 @@ pip install fastapi uvicorn python-multipart requests groq qdrant-client python-
 # Example .env file:
 HF_TOKEN="your_huggingface_token"
 GROQ_API_KEY="your_groq_api_key"
+NOMIC_API_KEY="your_nomic_api_key"
 QDRANT_URL="https://your-cluster-url.cloud.qdrant.io:6333"
 QDRANT_API_KEY="your_qdrant_api_key"
 ```
@@ -62,7 +63,7 @@ This project is divided into a serverless-ready FastAPI backend and a dynamic Re
 - **`POST /chat/{chat_id}/refresh`**: Forces a re-index of documents for that specific chat session.
 
 ### B. The RAG Engine (`pikerag/utils/rag_utils.py`)
-- **Semantic Chunking (MinerU JSON)**: Instead of naive text splitting, the engine iterates through MinerU's rich `content_list.json` block-by-block. It preserves logical headings, rich HTML tables, embedded image diagrams (e.g. `![Caption](url)`), and precisely tracks the `page_idx` of every element.
+- **Structural Element Chunking & Parent Document Retrieval**: Instead of naive text splitting, the engine iterates through MinerU's rich JSON block-by-block. It isolates every single paragraph, table, and image into its own tiny vector to guarantee pixel-perfect search accuracy. When a vector is matched, it uses *Parent Document Retrieval* to dynamically inject the Full Page Context into the LLM prompt, giving the AI massive reasoning power without diluting the search space.
 - **Precise Source Citations**: The engine embeds specific PDF page fragments (`#page=X`) into the source links of every vector chunk. When Groq cites a source, clicking it in the frontend seamlessly opens the PDF in a new tab, automatically scrolled to the exact referenced page.
 - **Qdrant Cloud Integration**: Utilizes a persistent cloud vector database to ensure scalability. Uses `chat_id` as a highly optimized `keyword` payload index, allowing instantaneous filtering of documents per user session. Features a graceful fallback to a local JSON file if cloud keys are missing.
 - **Strict Domain Guardrails**: The Groq LLM prompt is heavily restricted. It is engineered to output Root Cause Analysis (RCA) checklists for equipment failures and is under a strict guardrail to absolutely reject general knowledge, off-topic conversation, or standard programming questions unless specifically related to industrial PLC/SCADA systems.
@@ -84,6 +85,6 @@ MinerU handles the layout analysis, OCR, and multimodal extraction.
 - **Endpoint**: Configured in `rag_utils.py` pointing to a dedicated HF Space.
 - **Flow**: Uploaded PDFs are sent as multipart/form-data. The engine downloads the highly structured `content_list.json` along with base64 encoded diagram images.
 
-### 2. Hugging Face Embeddings API
-Embedding generation is outsourced to a lightweight API wrapper running `all-MiniLM-L6-v2`.
-- **Flow**: Text chunks are passed to the remote URL which returns high-dimensional float arrays, completely avoiding the need to run heavy sentence-transformer models locally.
+### 2. Nomic Atlas Embeddings API
+Embedding generation is outsourced to the commercial Nomic Atlas API (`nomic-embed-text-v1.5`).
+- **Flow**: Extracted structural elements are sent as a single batched JSON request directly to Nomic's GPU clusters. It instantly returns highly-precise 768-dimensional float arrays, completely bypassing CPU timeouts and avoiding local sentence-transformer overhead.

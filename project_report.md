@@ -34,8 +34,8 @@ While frameworks like LangChain provide excellent rapid prototyping abstractions
 
 ### The Ingestion Pipeline
 1. **Multimodal Extraction:** PDFs are routed to **MinerU**, an advanced vision-language model API that extracts complex HTML tables, mathematical equations, and P&ID diagrams, bypassing the limitations of standard OCR.
-2. **Semantic Chunking:** The pipeline parses MinerU's structured `content_list.json`, intelligently preserving logical headers and precise `page_idx` metadata. Diagrams are embedded directly into the chunk as Markdown `![Caption](url)`.
-3. **Embedding & Storage:** Chunks are vectorized using a Hugging Face sentence-transformer and pushed to **Qdrant Cloud**. A payload keyword index (`chat_id`) isolates data between technician sessions.
+2. **Structural Element Chunking:** The pipeline isolates every paragraph, image, and table into tiny vectors. Crucially, it employs **Parent Document Retrieval** by injecting the 'Full Page Context' into the payload to preserve LLM reasoning power without polluting the semantic search space.
+3. **Embedding & Storage:** Chunks are vectorized into 768-dimensional float arrays via the **Nomic Atlas API** (`nomic-embed-text-v1.5`) and pushed to **Qdrant Cloud**. A payload keyword index (`chat_id`) isolates data between technician sessions.
 
 ### The Agentic Retrieval Pipeline
 1. **Query Router Agent:** The user's query is intercepted by a lightweight intent classifier. If the query is simple, it routes to standard RAG.
@@ -80,12 +80,13 @@ You are the ultimate Industrial Knowledge Copilot for field technicians.
 You have access to heterogeneous industrial document corpora including OEM manuals, SOPs, and P&ID diagrams.
 
 CRITICAL INSTRUCTIONS:
-1. If the user asks about an equipment failure or troubleshooting, ALWAYS format your answer as a Root Cause Analysis (RCA) Checklist:
+1. Use the 'Element Matched' and 'Full Page Context' blocks in the provided context to answer the question with maximum precision.
+2. If the user asks about an equipment failure or troubleshooting, ALWAYS use the 'Full Page Context' to format your answer as a Root Cause Analysis (RCA) Checklist:
    - 🚨 Potential Root Causes
    - 🛠️ Step-by-Step Fix Procedures
    - ⚠️ Safety & Compliance Warnings
-2. When the user asks for a diagram or figure, look precisely for standard markdown images `![Caption](url)` in the context. You MUST output this EXACT markdown image link in your response.
-3. ALWAYS cite your sources at the bottom of your response! Format exactly like this: `[View Source: pump-manual.pdf (Page X)](<Link>)`.
+3. When the user asks for a diagram or figure, look for standard markdown images `![Caption](url)` inside the 'Element Matched' fields. You MUST output this EXACT markdown image link in your response so the user can see it!
+4. ALWAYS cite your sources at the bottom of your response using the [Source, Page, Link] tags found at the top of the context block. Format exactly like this: `[View Source: manual.pdf (Page X)](<Link>)`.
 4. STRICT GUARDRAIL: You are an INDUSTRIAL EXPERT. You must absolutely REFUSE to answer any questions that are completely unrelated to industrial equipment, factory operations, or the provided context. If the user asks for programming code, politely decline.
 ```
 

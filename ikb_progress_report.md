@@ -10,15 +10,15 @@ The following technologies have been successfully integrated into the core archi
 
 ### 1. RAG over heterogeneous industrial document corpora
 * **Implementation:** We transitioned from local, volatile storage to **Qdrant Cloud**, allowing for persistent and highly scalable vector storage.
-* **Result:** The system seamlessly ingests complex engineering PDFs (like OEM manuals and SOPs), generates vectors via Hugging Face embeddings, and utilizes Groq (Llama-3) to rapidly synthesize accurate, context-aware answers.
+* **Result:** The system seamlessly ingests complex engineering PDFs (like OEM manuals and SOPs), generates 768-dimensional vectors via the **Nomic Atlas API**, and utilizes Groq (Llama-3 70B) to rapidly synthesize accurate, context-aware answers.
 
 ### 2. Computer Vision (P&ID parsing, drawing digitisation)
 * **Implementation:** Integrated the **MinerU Multimodal Pipeline** as a remote Hugging Face microservice.
 * **Result:** The system successfully detects, extracts, and digitizes complex Piping and Instrumentation Diagrams (P&IDs) and figures embedded inside PDFs. These images are base64-encoded, saved locally, and dynamically served directly into the chat interface whenever a user references them.
 
 ### 3. OCR & Document Intelligence (structured + unstructured)
-* **Implementation:** Completely replaced naive text splitting with an intelligent **Semantic Chunker**. 
-* **Result:** By parsing MinerU's native `content_list.json`, the engine differentiates between standard paragraphs, complex HTML tables, and mathematical equations. It also precisely tracks the `page_idx` of every element, enabling hyper-accurate source citations that open the exact page of a PDF in a new browser tab.
+* **Implementation:** Completely replaced naive text splitting with an intelligent **Structural Element Chunker** combined with **Parent Document Retrieval**. 
+* **Result:** By parsing MinerU's native JSON, the engine isolates every paragraph, table, and image into its own tiny, highly-distinct vector. However, during vector retrieval, it automatically injects the 'Full Page Context' into the LLM payload, enabling hyper-accurate source citations and massive reasoning power without diluting the semantic search space.
 
 ---
 
