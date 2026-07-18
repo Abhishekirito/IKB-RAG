@@ -29,28 +29,36 @@ FastAPI • React • Vite • Groq • Qdrant Cloud • MinerU • Nomic Embedd
 
 ---
 
-# 🚀 Table of Contents
+# 📖 Table of Contents
 
-- [📖 Overview](#overview)
-- [🚀 Live Demo](#-live-demo)
-- [✨ Features](#key-features)
-- [🏗 Architecture](#architecture)
-- [⚙ Tech Stack](#tech-stack)
-- [🚀 Getting Started](#getting-started)
+- [📌 Overview](#overview)
+- [🚀 Live Demo](#live-demo)
+- [✨ Key Features](#key-features)
+- [🏗️ Architecture](#architecture)
+- [⚙️ Tech Stack](#tech-stack)
 - [📁 Project Structure](#project-structure)
+- [🚀 Getting Started](#getting-started)
 - [🔑 Environment Variables](#environment-variables)
+- [📦 Install Backend](#install-backend)
+- [▶️ Start Backend](#start-backend)
+- [💻 Frontend Installation](#frontend-installation)
+- [🚦 Application Workflow](#application-workflow)
+- [🌟 Highlights](#highlights)
 - [🌐 Backend API](#backend-api)
 - [🧠 RAG Pipeline](#rag-pipeline)
+- [🔒 AI Guardrails](#ai-guardrails)
 - [💻 Frontend Features](#frontend-features)
-- [☁ Hugging Face Services](#hugging-face-microservices)
+- [☁️ Hugging Face Microservices](#hugging-face-microservices)
 - [📊 Performance Highlights](#performance-highlights)
 - [📈 Roadmap](#roadmap)
 - [🤝 Contributing](#contributing)
 - [📜 License](#license)
+- [💡 Future Vision](#future-vision)
+- [🙌 Acknowledgements](#acknowledgements)
 
 ---
 
-# 📌 Overview
+<h1 id="overview">📌 Overview</h1>
 
 IKB-RAG is a full-stack AI-powered Industrial Knowledge Assistant that combines Retrieval-Augmented Generation (RAG) with multimodal document understanding to help engineers diagnose industrial equipment failures quickly and accurately.
 
@@ -68,7 +76,7 @@ The result is an intelligent troubleshooting assistant capable of delivering hig
 
 ---
 
-# 🚀 Live Demo
+<h1 id="live-demo">🚀 Live Demo</h1>
 
 Experience IKB-RAG in action through the live application and interactive walkthrough.
 
@@ -107,7 +115,7 @@ Experience IKB-RAG in action through the live application and interactive walkth
 
 ---
 
-# ✨ Key Features
+<h1 id="key-features">✨ Key Features</h1>
 
 ## 🤖 AI Powered Troubleshooting
 
@@ -167,7 +175,7 @@ Powered by **MinerU**
 
 ---
 
-# 🏗 Architecture
+<h1 id="architecture">🏗️ Architecture</h1>
 
 ```text
                    +----------------------+
@@ -203,7 +211,7 @@ Powered by **MinerU**
 
 ---
 
-# ⚙ Tech Stack
+<h1 id="tech-stack">⚙️ Tech Stack</h1>
 
 | Category | Technologies |
 |-----------|--------------|
@@ -219,7 +227,7 @@ Powered by **MinerU**
 
 ---
 
-# 📁 Project Structure
+<h1 id="project-structure">📁 Project Structure</h1>
 
 ```text
 IKB-RAG
@@ -244,7 +252,7 @@ IKB-RAG
 
 ---
 
-# 🚀 Getting Started
+<h1 id="getting-started">🚀 Getting Started</h1>
 
 ## Prerequisites
 
@@ -264,7 +272,7 @@ You will also need API keys for:
 
 ---
 
-# 🔑 Environment Variables
+<h1 id="environment-variables">🔑 Environment Variables</h1>
 
 Create a `.env` file in the root directory.
 
@@ -282,7 +290,7 @@ QDRANT_API_KEY=your_qdrant_api_key
 
 ---
 
-# 📦 Install Backend
+<h1 id="install-backend">📦 Install Backend</h1>
 
 ```bash
 pip install fastapi
@@ -308,7 +316,7 @@ pip install -r requirements.txt
 
 ---
 
-# ▶ Start Backend
+<h1 id="start-backend">▶️ Start Backend</h1>
 
 ```bash
 python api.py
@@ -329,7 +337,7 @@ http://localhost:8002
 
 ---
 
-# 💻 Frontend Installation
+<h1 id="frontend-installation">💻 Frontend Installation</h1>
 
 Open a new terminal.
 
@@ -357,7 +365,7 @@ http://localhost:5173
 
 ---
 
-# 🚦 Application Workflow
+<h1 id="application-workflow">🚦 Application Workflow</h1>
 
 ```text
 Start Backend
@@ -389,7 +397,7 @@ Groq Generates Final Answer
 
 ---
 
-# 🌟 Highlights
+<h1 id="highlights">🌟 Highlights</h1>
 
 - ⚡ Low latency responses
 - 📄 Accurate document citations
@@ -401,7 +409,7 @@ Groq Generates Final Answer
 
 ---
 
-# 🌐 Backend API
+<h1 id="backend-api">🌐 Backend API</h1>
 
 The FastAPI backend exposes a clean REST API responsible for document management, vector indexing, retrieval, and chat lifecycle management.
 
@@ -449,7 +457,7 @@ Streaming Response
 
 ---
 
-# 🧠 RAG Pipeline
+<h1 id="rag-pipeline">🧠 RAG Pipeline</h1>
 
 The Retrieval-Augmented Generation pipeline is designed specifically for industrial documentation, where preserving structure and context is essential.
 
@@ -557,7 +565,7 @@ The model generates an expert-level troubleshooting response while maintaining s
 
 ---
 
-# 🔒 AI Guardrails
+<h1 id="ai-guardrails">🔒 AI Guardrails</h1>
 
 The assistant is intentionally restricted to industrial engineering domains.
 
@@ -587,7 +595,7 @@ unless directly related to industrial systems.
 
 ---
 
-# 💻 Frontend Features
+<h1 id="frontend-features">💻 Frontend Features</h1>
 
 The frontend is built using **React + Vite** with a modern glassmorphism interface.
 
@@ -661,7 +669,7 @@ Includes elegant confirmation dialogs before:
 
 ---
 
-# ☁ Hugging Face Microservices
+<h1 id="hugging-face-microservices">☁️ Hugging Face Microservices</h1>
 
 Heavy computation is outsourced to Hugging Face Spaces, keeping deployment lightweight.
 
@@ -706,7 +714,7 @@ Advantages:
 
 ---
 
-# 📊 Performance Highlights
+<h1 id="performance-highlights">📊 Performance Highlights</h1>
 
 | Feature | Benefit |
 |----------|----------|
@@ -720,7 +728,7 @@ Advantages:
 
 ---
 
-# 📈 Roadmap
+<h1 id="roadmap">📈 Roadmap</h1>
 
 ## ✅ Completed
 
@@ -755,7 +763,7 @@ Advantages:
 
 ---
 
-# 🤝 Contributing
+<h1 id="contributing">🤝 Contributing</h1>
 
 Contributions are welcome!
 
@@ -777,7 +785,7 @@ Create Pull Request
 
 ---
 
-# 📜 License
+<h1 id="license">📜 License</h1>
 
 This project is licensed under the **MIT License**.
 
@@ -785,7 +793,7 @@ Feel free to use, modify, and distribute this project under the terms of the lic
 
 ---
 
-# 💡 Future Vision
+<h1 id="future-vision">💡 Future Vision</h1>
 
 IKB-RAG aims to become a complete AI-powered Industrial Knowledge Platform capable of assisting engineers throughout the equipment lifecycle - from installation and maintenance to diagnostics, predictive analytics, and intelligent documentation search.
 
@@ -793,7 +801,7 @@ Future enhancements will focus on expanding multimodal understanding, improving 
 
 ---
 
-# 🙌 Acknowledgements
+<h1 id="acknowledgements">🙌 Acknowledgements</h1>
 
 Special thanks to the amazing open-source community and technologies powering this project.
 
