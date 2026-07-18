@@ -80,7 +80,6 @@ class IKBRagEngine:
                 "Authorization": f"Bearer {self.nomic_api_key}",
                 "Content-Type": "application/json"
             }
-            # Nomic API handles batching seamlessly on their massive GPU clusters
             payload = {
                 "model": "nomic-embed-text-v1.5",
                 "texts": texts,
@@ -108,20 +107,17 @@ class IKBRagEngine:
         text = ""
         
         try:
-            # Prefix document name with chat_id to isolate files per chat
             base_name = os.path.basename(file_path)
             if not base_name.startswith(f"{chat_id}_"):
                 doc_name = f"{chat_id}_{base_name}"
             else:
                 doc_name = base_name
             
-            # Save a permanent copy of the document for the user to view later
             import shutil
             os.makedirs("uploaded_documents", exist_ok=True)
             saved_doc_path = os.path.abspath(os.path.join("uploaded_documents", doc_name))
             shutil.copy(file_path, saved_doc_path)
             
-            # Send file to MinerU API
             mineru_api_url = "https://abhiswork-ikb-mineru.hf.space/file_parse"
             print("🟢 Check service: Verifying MinerU API...")
             print("🟢 Submit: Uploading file to MinerU...")
@@ -132,7 +128,6 @@ class IKBRagEngine:
                 files = {"files": (doc_name, f)}
                 data = {"is_ocr": "False", "backend": "pipeline"}
                 headers = {"Authorization": f"Bearer {self.hf_token}"}
-                # Use standard multipart form-data 'files' field for MinerU
                 res = requests.post(mineru_api_url, files=files, data=data, headers=headers)
                 
             print("🟢 Parse: Extraction complete!")
@@ -142,7 +137,6 @@ class IKBRagEngine:
                 
             parsed_data = res.json()
             
-            # Extract markdown from common JSON response structures
             text = ""
             if isinstance(parsed_data, dict):
                 if "content" in parsed_data:
@@ -152,18 +146,15 @@ class IKBRagEngine:
                 elif "markdown" in parsed_data:
                     text = parsed_data["markdown"]
                 else:
-                    # Fallback to dumping the whole JSON if schema is unknown
                     text = json.dumps(parsed_data, indent=2)
             else:
                 text = str(parsed_data)
                 
-            # Save raw outputs locally in structured folders
             pdf_base = os.path.splitext(base_name)[0]
             parsed_dir = os.path.join("parsed_data", str(chat_id), pdf_base)
             os.makedirs(parsed_dir, exist_ok=True)
             
             with open(os.path.join(parsed_dir, "mineru_output.json"), "w", encoding="utf-8") as f:
-                # Extract the pure content_list if available to match official JSON structure
                 json_to_save = parsed_data
                 if isinstance(parsed_data, dict) and "data" in parsed_data and "content_list" in parsed_data["data"]:
                     if parsed_data["data"]["content_list"]:
@@ -173,21 +164,18 @@ class IKBRagEngine:
             with open(os.path.join(parsed_dir, "content.md"), "w", encoding="utf-8") as f:
                 f.write(text)
                 
-            # Save images if provided in the JSON from MinerU API
             if isinstance(parsed_data, dict) and "data" in parsed_data and "images_base64" in parsed_data["data"]:
                 import base64
                 img_dir = os.path.join("static_images", str(chat_id), pdf_base)
                 os.makedirs(img_dir, exist_ok=True)
                 for img_name, b64_data in parsed_data["data"]["images_base64"].items():
                     img_bytes = base64.b64decode(b64_data)
-                    # Handle if the name came with directory prefix e.g. images/xxx.jpg
                     clean_name = os.path.basename(img_name)
                     with open(os.path.join(img_dir, clean_name), "wb") as f:
                         f.write(img_bytes)
 
             doc_url = f"http://localhost:8002/documents/{chat_id}/{base_name}"
 
-            
         except Exception as e:
             raise Exception(f"Failed to process file {file_path}. Error: {str(e)}")
             
@@ -195,10 +183,8 @@ class IKBRagEngine:
         raw_elements = []
         payloads = []
         
-        # Dictionary to hold the aggregated content for each page
         page_contents = {}
         
-        # Safely extract content_list whether MinerU wrapped it in "data" or returned a direct list
         content_list = []
         if isinstance(parsed_data, dict) and "data" in parsed_data and "content_list" in parsed_data["data"]:
             content_list = parsed_data["data"]["content_list"]
@@ -238,13 +224,18 @@ class IKBRagEngine:
             
             if b_type in ["header", "footer", "page_number"]: continue
             
-            element_content = ""
+            element_content_for_llm = ""
+            element_content_for_embedding = "" 
+            
             if b_type == "text":
-                element_content = block.get("text", "")
+                element_content_for_llm = block.get("text", "")
+                element_content_for_embedding = element_content_for_llm
             elif b_type == "table":
-                element_content = block.get("table_body", block.get("text", ""))
+                element_content_for_llm = block.get("table_body", block.get("text", ""))
+                element_content_for_embedding = element_content_for_llm
             elif b_type == "equation":
-                element_content = block.get("equation_body", block.get("text", ""))
+                element_content_for_llm = block.get("equation_body", block.get("text", ""))
+                element_content_for_embedding = element_content_for_llm
             elif b_type == "image":
                 img_path = block.get("img_path", "")
                 img_filename = os.path.basename(img_path)
@@ -253,24 +244,31 @@ class IKBRagEngine:
                 caption = " ".join(cap) if isinstance(cap, list) else str(cap)
                 foot = block.get("image_footnote", "")
                 footnote = " ".join(foot) if isinstance(foot, list) else str(foot)
-                element_content = f"![{caption.strip()}]({img_url})"
-                if footnote.strip(): element_content += f"\n*{footnote.strip()}*"
                 
-            if not element_content.strip(): continue
+                element_content_for_llm = f"![{caption.strip()}]({img_url})"
+                if footnote.strip(): element_content_for_llm += f"\n*{footnote.strip()}*"
+                
+                element_content_for_embedding = f"Image Diagram Figure: {caption.strip()} {footnote.strip()}"
+                
+            if not element_content_for_embedding.strip(): continue
                 
             actual_page = p_idx + 1
             page_fragment = f"#page={actual_page}"
+            unique_page_id = f"{chat_id}_{base_name}_page_{actual_page}"
             
-            # The formatted text Groq will see (contains element + full page context)
-            formatted_text = f"[Source: {base_name}, Page: {actual_page}, Link: {doc_url}{page_fragment}]\n"
-            formatted_text += f"Element Matched: {element_content.strip()}\n"
-            formatted_text += f"Full Page Context: {page_contents.get(p_idx, '').strip()}"
+            formatted_element = f"Element Matched: {element_content_for_llm.strip()}"
+            full_page_text = page_contents.get(p_idx, '').strip()
             
-            raw_elements.append(element_content.strip())
+            raw_elements.append(element_content_for_embedding.strip())
+            
             payloads.append({
                 "chat_id": chat_id, 
-                "text": formatted_text, 
-                "source_file": base_name
+                "page_id": unique_page_id,
+                "source_file": base_name,
+                "page_num": actual_page,
+                "link": f"{doc_url}{page_fragment}",
+                "matched_element": formatted_element,
+                "parent_context": full_page_text
             })
                 
         # Fallback if content_list was empty
@@ -280,8 +278,12 @@ class IKBRagEngine:
                 raw_elements.append(chunk)
                 payloads.append({
                     "chat_id": chat_id, 
-                    "text": f"[Source: {base_name}, Link: {doc_url}]\n\n{chunk}", 
-                    "source_file": base_name
+                    "page_id": f"{chat_id}_{base_name}_fallback_{i}",
+                    "source_file": base_name,
+                    "page_num": "?",
+                    "link": f"{doc_url}",
+                    "matched_element": f"Element Matched: {chunk}",
+                    "parent_context": chunk
                 })
 
         print("🟡 Queue: Generating vector embeddings via Nomic API...")
@@ -310,13 +312,11 @@ class IKBRagEngine:
                 print(f"[ERROR] Qdrant Upsert Failed: {e}")
                 raise e
         else:
-            # Save to our custom JSON vector database
             for i, emb in enumerate(embeddings):
-                self.knowledge_base.append({
-                    "chat_id": payloads[i]["chat_id"],
-                    "text": payloads[i]["text"],
-                    "embedding": emb
-                })
+                # Save whole payload dictionary in local knowledge base
+                doc_record = payloads[i].copy()
+                doc_record["embedding"] = emb
+                self.knowledge_base.append(doc_record)
                 
             with open(self.db_path, "w", encoding="utf-8") as f:
                 json.dump(self.knowledge_base, f)
@@ -326,11 +326,8 @@ class IKBRagEngine:
         return len(raw_elements)
         
     def refresh_chat_data(self, chat_id):
-        """Re-indexes all documents associated with a specific chat."""
-        # 1. Clear out old chunks
         self.knowledge_base = [doc for doc in self.knowledge_base if doc.get("chat_id") != chat_id]
         
-        # 2. Find and re-process all files
         reindexed = 0
         if os.path.exists('uploaded_documents'):
             for filename in os.listdir('uploaded_documents'):
@@ -344,7 +341,6 @@ class IKBRagEngine:
         return f"✅ Successfully re-parsed {reindexed} chunks for chat {chat_id}"
 
     def delete_chat_data(self, chat_id):
-        """Deletes all embeddings and files associated with a specific chat."""
         if self.use_qdrant:
             from qdrant_client.http.models import Filter, FieldCondition, MatchValue
             try:
@@ -362,21 +358,18 @@ class IKBRagEngine:
                 with open(self.db_path, "w", encoding="utf-8") as f:
                     json.dump(self.knowledge_base, f)
                 
-        # Delete files from uploaded_documents
         if os.path.exists('uploaded_documents'):
             for filename in os.listdir('uploaded_documents'):
                 if filename.startswith(f"{chat_id}_"):
                     try: os.remove(os.path.join('uploaded_documents', filename))
                     except: pass
                     
-        # Delete images from static_images
         chat_images_dir = os.path.join('static_images', str(chat_id))
         if os.path.exists(chat_images_dir):
             import shutil
             try: shutil.rmtree(chat_images_dir)
             except: pass
                     
-        # Delete parsed data folder for this chat
         chat_parsed_dir = os.path.join('parsed_data', str(chat_id))
         if os.path.exists(chat_parsed_dir):
             import shutil
@@ -386,7 +379,6 @@ class IKBRagEngine:
         return f"✅ Erased all data for chat {chat_id}"
 
     def clear_knowledge_base(self):
-        """Wipes the Vector DB, Document Store, Image Store, and Neo4j Graph DB."""
         if self.use_qdrant:
             try: self.qdrant.delete_collection(collection_name=self.collection_name)
             except: pass
@@ -406,7 +398,6 @@ class IKBRagEngine:
         return "✅ Successfully erased Vector DB and File Storage!"
 
     def _call_groq(self, prompt: str, temperature=0.1, json_mode=False):
-        """Helper to call Groq API"""
         headers = {
             "Authorization": f"Bearer {self.groq_api_key}",
             "Content-Type": "application/json"
@@ -426,8 +417,8 @@ class IKBRagEngine:
             print(f"Groq API Error: {response.text}")
             return None
 
-    def _retrieve_context(self, q_str: str, chat_id: str, limit: int = 4):
-        """Helper to retrieve vector chunks from the database"""
+    def _retrieve_context(self, q_str: str, chat_id: str, limit: int = 6):
+        """Returns raw payload dictionaries from the database."""
         emb_result = self._get_embeddings([q_str], task_type="search_query")
         if isinstance(emb_result, dict) and "error" in emb_result:
             print(f"Nomic API Error: {emb_result['error']}")
@@ -442,21 +433,19 @@ class IKBRagEngine:
                 query_filter=Filter(must=[FieldCondition(key="chat_id", match=MatchValue(value=chat_id))]),
                 limit=limit
             )
-            return [hit.payload["text"] for hit in search_result.points]
+            return [hit.payload for hit in search_result.points]
         else:
             scores = []
             for doc in self.knowledge_base:
                 if doc.get("chat_id") == chat_id:
                     score = cosine_similarity(q_emb, doc["embedding"])
-                    scores.append((score, doc["text"]))
+                    scores.append((score, doc)) 
             scores.sort(reverse=True, key=lambda x: x[0])
             return [doc for score, doc in scores[:limit]]
 
     def query(self, question: str, chat_id: str = "default"):
-        """Agentic RAG: Routes query, decomposes if complex, retrieves context, and generates answer."""
         print(f"\n[AGENT] Analyzing query intent for: '{question}'")
         
-        # Agent 1: Router
         router_prompt = f"""You are an intelligent query router. Analyze the following user question.
 If it is a simple factual question requiring a single search, classify as 'SIMPLE'.
 If it is a complex, multi-part, or troubleshooting question requiring deep context, classify as 'COMPLEX'.
@@ -472,9 +461,8 @@ Question: {question}"""
         
         print(f"[AGENT] Routing Decision: {intent}")
         
-        top_docs = []
+        all_payloads = []
         if intent == "COMPLEX":
-            # Agent 2: Decomposer
             print("[AGENT] Triggering QA Decomposer...")
             decomp_prompt = f"""You are an Expert Industrial Decomposer. Break the following complex user query into independent sub-queries required to search a vector database.
 Generate between 2 to 4 sub-queries depending on complexity. 
@@ -482,7 +470,7 @@ Output JSON strictly in this format: {{"sub_queries": ["query 1", "query 2"]}}
 Question: {question}"""
             
             decomp_response = self._call_groq(decomp_prompt, json_mode=True)
-            sub_queries = [question] # Fallback
+            sub_queries = [question] 
             try:
                 if decomp_response:
                     sub_queries = json.loads(decomp_response).get("sub_queries", [question])
@@ -490,20 +478,44 @@ Question: {question}"""
             
             print(f"[AGENT] Decomposed into {len(sub_queries)} sub-queries: {sub_queries}")
             
-            all_docs = []
             for sub_q in sub_queries:
-                docs = self._retrieve_context(sub_q, chat_id, limit=2)
-                all_docs.extend(docs)
-                
-            # Deduplicate chunks
-            top_docs = list(set(all_docs))
-            print(f"[AGENT] Retrieved {len(top_docs)} unique context chunks across all sub-queries.")
+                payloads = self._retrieve_context(sub_q, chat_id, limit=3)
+                all_payloads.extend(payloads)
         else:
-            # Standard RAG
-            top_docs = self._retrieve_context(question, chat_id, limit=2)
-        context = "\n\n".join(top_docs)
+            all_payloads = self._retrieve_context(question, chat_id, limit=6)
+
+        # Smart Deduplication (Parent-Document Assembly)
+        grouped_pages = {}
+        for payload in all_payloads:
+            # Fallback for old data structures if database hasn't been cleared
+            page_id = payload.get("page_id", payload.get("text", "")) 
+            
+            if page_id not in grouped_pages:
+                grouped_pages[page_id] = {
+                    "source": payload.get("source_file", "Unknown"),
+                    "page_num": payload.get("page_num", "?"),
+                    "link": payload.get("link", ""),
+                    "parent_context": payload.get("parent_context", ""),
+                    "matched_elements": [payload.get("matched_element", payload.get("text", ""))]
+                }
+            else:
+                element = payload.get("matched_element", payload.get("text", ""))
+                if element not in grouped_pages[page_id]["matched_elements"]:
+                    grouped_pages[page_id]["matched_elements"].append(element)
+
+        # Build optimized context string
+        context_blocks = []
+        for page_data in grouped_pages.values():
+            block = f"[Source: {page_data['source']}, Page: {page_data['page_num']}, Link: {page_data['link']}]\n"
+            block += "Specific Elements Matched by Search:\n"
+            for el in page_data["matched_elements"]:
+                block += f"- {el}\n"
+            if page_data['parent_context']:
+                block += f"\nFull Page Context for RCA/Troubleshooting:\n{page_data['parent_context']}"
+            context_blocks.append(block)
+
+        context = "\n\n====================\n\n".join(context_blocks)
         
-        # Hard limit to prevent Groq TPM crashes (~4000 tokens)
         if len(context) > 15000:
             context = context[:15000] + "\n\n...[Context Truncated to prevent Rate Limits]..."
         
@@ -511,12 +523,12 @@ Question: {question}"""
 You have access to heterogeneous industrial document corpora including OEM manuals, SOPs, and P&ID diagrams.
 
 CRITICAL INSTRUCTIONS:
-1. Use the 'Element Matched' and 'Full Page Context' blocks in the provided context to answer the question with maximum precision.
+1. Use the 'Specific Elements Matched' and 'Full Page Context' blocks in the provided context to answer the question with maximum precision.
 2. If the user asks about an equipment failure or troubleshooting, ALWAYS use the 'Full Page Context' to format your answer as a Root Cause Analysis (RCA) Checklist:
    - 🚨 Potential Root Causes
    - 🛠️ Step-by-Step Fix Procedures
    - ⚠️ Safety & Compliance Warnings
-3. When the user asks for a diagram or figure, look for standard markdown images `![Caption](url)` inside the 'Element Matched' fields. You MUST output this EXACT markdown image link in your response so the user can see it!
+3. IMAGE EXTRACTION: When the user asks for a diagram, schematic, or figure, you must thoroughly scan BOTH the 'Specific Elements Matched' AND the 'Full Page Context' blocks for standard markdown images `![Caption](url)`. If the image markdown exists ANYWHERE in the context, you MUST output that EXACT markdown link in your response so the user can see it.
 4. ALWAYS cite your sources at the bottom of your response using the [Source, Page, Link] tags found at the top of the context block. Format exactly like this: `[View Source: manual.pdf (Page X)](<Link>)`.
 5. STRICT GUARDRAIL: You are an INDUSTRIAL EXPERT. You must absolutely REFUSE to answer any questions that are unrelated to industrial equipment or the provided context.
 
