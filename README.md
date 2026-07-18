@@ -29,22 +29,24 @@ FastAPI • React • Vite • Groq • Qdrant Cloud • MinerU • Nomic Embedd
 
 ---
 
-# 📖 Table of Contents
+# 🚀 Table of Contents
 
-- 📌 Overview
-- ✨ Features
-- 🏗 Architecture
-- ⚙ Tech Stack
-- 🚀 Getting Started
-- 📁 Project Structure
-- 🔑 Environment Variables
-- ▶ Running the Application
-- 🌐 Backend API
-- 🧠 RAG Pipeline
-- 💻 Frontend Features
-- ☁ Hugging Face Services
-- 📌 Future Improvements
-- 🤝 Contributing
+- [📖 Overview](#overview)
+- [🚀 Live Demo](#-live-demo)
+- [✨ Features](#key-features)
+- [🏗 Architecture](#architecture)
+- [⚙ Tech Stack](#tech-stack)
+- [🚀 Getting Started](#getting-started)
+- [📁 Project Structure](#project-structure)
+- [🔑 Environment Variables](#environment-variables)
+- [🌐 Backend API](#backend-api)
+- [🧠 RAG Pipeline](#rag-pipeline)
+- [💻 Frontend Features](#frontend-features)
+- [☁ Hugging Face Services](#hugging-face-microservices)
+- [📊 Performance Highlights](#performance-highlights)
+- [📈 Roadmap](#roadmap)
+- [🤝 Contributing](#contributing)
+- [📜 License](#license)
 
 ---
 
@@ -63,6 +65,45 @@ Unlike traditional chatbots, IKB-RAG understands:
 using **MinerU's multimodal parsing engine**, stores document embeddings inside **Qdrant Cloud**, and generates contextual expert responses through **Groq's Llama 3 models**.
 
 The result is an intelligent troubleshooting assistant capable of delivering highly accurate answers with precise document citations.
+
+---
+
+# 🚀 Live Demo
+
+Experience IKB-RAG in action through the live application and interactive walkthrough.
+
+<div align="center">
+
+&nbsp;
+
+<a href="https://youtu.be/YOUR_VIDEO_ID">
+  <img src="https://img.shields.io/badge/▶️%20Watch%20Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube Demo">
+</a>
+
+</div>
+
+<br>
+
+<p align="center">
+  <a href="https://youtu.be/YOUR_VIDEO_ID">
+    <img src="assets/1.png" width="900" alt="IKB-RAG Demo">
+  </a>
+</p>
+
+<p align="center">
+<b>👆 Click the thumbnail above to watch the complete project walkthrough.</b>
+</p>
+
+
+## ✨ What You'll See
+
+- 📄 Upload and parse industrial PDF manuals
+- 🔍 Semantic document retrieval using RAG
+- 🤖 AI-powered troubleshooting with Groq Llama 3
+- 📑 Source-aware responses with page citations
+- 🖼️ Automatic extraction of tables, diagrams, and images
+- ☁️ Persistent vector storage using Qdrant Cloud
+- 🎨 Modern glassmorphism-based user interface
 
 ---
 
@@ -200,44 +241,6 @@ IKB-RAG
 └── requirements.txt
 ```
 
----
-
-# 🚀 Live Demo
-
-Experience IKB-RAG in action through the live application and interactive walkthrough.
-
-<div align="center">
-
-&nbsp;
-
-<a href="https://youtu.be/YOUR_VIDEO_ID">
-  <img src="https://img.shields.io/badge/▶️%20Watch%20Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube Demo">
-</a>
-
-</div>
-
-<br>
-
-<p align="center">
-  <a href="https://youtu.be/YOUR_VIDEO_ID">
-    <img src="assets/1.png" width="900" alt="IKB-RAG Demo">
-  </a>
-</p>
-
-<p align="center">
-<b>👆 Click the thumbnail above to watch the complete project walkthrough.</b>
-</p>
-
-
-## ✨ What You'll See
-
-- 📄 Upload and parse industrial PDF manuals
-- 🔍 Semantic document retrieval using RAG
-- 🤖 AI-powered troubleshooting with Groq Llama 3
-- 📑 Source-aware responses with page citations
-- 🖼️ Automatic extraction of tables, diagrams, and images
-- ☁️ Persistent vector storage using Qdrant Cloud
-- 🎨 Modern glassmorphism-based user interface
 
 ---
 
