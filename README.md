@@ -84,7 +84,7 @@ Experience IKB-RAG in action through the live application and interactive walkth
 
 &nbsp;
 
-<a href="https://youtu.be/YOUR_VIDEO_ID">
+<a href="https://youtu.be/A2U511YVBXA">
   <img src="https://img.shields.io/badge/▶️%20Watch%20Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube Demo">
 </a>
 
@@ -93,7 +93,7 @@ Experience IKB-RAG in action through the live application and interactive walkth
 <br>
 
 <p align="center">
-  <a href="https://youtu.be/YOUR_VIDEO_ID">
+  <a href="https://youtu.be/A2U511YVBXA">
     <img src="assets/1.png" width="900" alt="IKB-RAG Demo">
   </a>
 </p>
