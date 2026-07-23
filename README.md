@@ -177,37 +177,7 @@ Powered by **MinerU**
 
 <h1 id="architecture">🏗️ Architecture</h1>
 
-```text
-                   +----------------------+
-                   |      User Upload     |
-                   +----------+-----------+
-                              |
-                              ▼
-                     PDF Processing
-                         (MinerU)
-                              |
-                              ▼
-              Structured Content Extraction
-      Text | Tables | Images | Equations | Layout
-                              |
-                              ▼
-                   Nomic Embeddings API
-                              |
-                              ▼
-                 Qdrant Vector Database
-                              |
-                              ▼
-                     Semantic Retrieval
-                              |
-                              ▼
-                Parent Document Retrieval
-                              |
-                              ▼
-                    Groq Llama 3 Model
-                              |
-                              ▼
-                   Industrial AI Response
-```
+<img src="assets/3.png" width="900" alt="IKB-RAG Architecture">
 
 ---
 
